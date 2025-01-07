@@ -3,23 +3,22 @@ package help
 import (
 	"crypto/md5"
 	"fmt"
-	gonanoid "github.com/matoous/go-nanoid/v2"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
+
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 // IsExist 判断文件是否存在
 func IsExist(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
-
 		return true
 	}
 
 	if os.IsExist(err) {
-
 		return true
 	}
 
@@ -27,7 +26,6 @@ func IsExist(path string) bool {
 }
 
 func GetEnv(key string) string {
-
 	return os.Getenv(key)
 }
 
@@ -35,7 +33,6 @@ func GenerateSignature(data map[string]interface{}, token string) string {
 	keys := make([]string, 0, len(data))
 	for k := range data {
 		if k == "signature" {
-
 			continue
 		}
 
@@ -46,7 +43,6 @@ func GenerateSignature(data map[string]interface{}, token string) string {
 	for _, k := range keys {
 		v := data[k]
 		if v == nil || v == "" {
-
 			continue
 		}
 
@@ -62,13 +58,12 @@ func GenerateSignature(data map[string]interface{}, token string) string {
 }
 
 func GenerateTradeId() (string, error) {
-	var defaultAlphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	defaultAlphabet := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 	return gonanoid.Generate(defaultAlphabet, 18)
 }
 
 func Md5String(text string) string {
-
 	return fmt.Sprintf("%x", md5.Sum([]byte(text)))
 }
 
@@ -96,7 +91,6 @@ func IsValidTRONWalletAddress(address string) bool {
 
 func MaskAddress(address string) string {
 	if len(address) <= 20 {
-
 		return address
 	}
 

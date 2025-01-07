@@ -5,30 +5,54 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cast"
+	"github.com/v03413/tronprotocol/api"
+	"github.com/v03413/tronprotocol/core"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/log"
 	"github.com/v03413/bepusdt/app/model"
 	"github.com/v03413/bepusdt/app/notify"
 	"github.com/v03413/bepusdt/app/telegram"
-	"github.com/v03413/tronprotocol/api"
-	"github.com/v03413/tronprotocol/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"strconv"
-	"time"
 )
 
 // 交易所在区块高度和当前区块高度差值超过20，说明此交易已经被网络确认
 const blockHeightNumConfirmedSub = 20
 
 // usdt trc20 contract address 41a614f803b6fd780986a42c78ec9c7f77e6ded13c TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
-var usdtTrc20ContractAddress = []byte{0x41, 0xa6, 0x14, 0xf8, 0x03, 0xb6, 0xfd, 0x78, 0x09, 0x86, 0xa4, 0x2c, 0x78, 0xec, 0x9c, 0x7f, 0x77, 0xe6, 0xde, 0xd1, 0x3c}
+var usdtTrc20ContractAddress = []byte{
+	0x41,
+	0xa6,
+	0x14,
+	0xf8,
+	0x03,
+	0xb6,
+	0xfd,
+	0x78,
+	0x09,
+	0x86,
+	0xa4,
+	0x2c,
+	0x78,
+	0xec,
+	0x9c,
+	0x7f,
+	0x77,
+	0xe6,
+	0xde,
+	0xd1,
+	0x3c,
+}
 
 var currentBlockHeight int64
 
@@ -62,17 +86,16 @@ func init() {
 
 // BlockScanStart 区块扫描
 func BlockScanStart(duration time.Duration) {
-	var node = config.GetTronGrpcNode()
+	node := config.GetTronGrpcNode()
 	log.Info("区块扫描启动：", node)
 
 	conn, err := grpc.NewClient(node, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-
 		log.Error("grpc.NewClient", err)
 	}
 
-	var ctx = context.Background()
-	var client = api.NewWalletClient(conn)
+	ctx := context.Background()
+	client := api.NewWalletClient(conn)
 
 	for range time.Tick(duration) { // 3秒产生一个区块
 		nowBlock, err := client.GetNowBlock2(ctx, nil) // 获取当前区块高度
@@ -88,7 +111,7 @@ func BlockScanStart(duration time.Duration) {
 		}
 
 		// 连续区块
-		var sub = nowBlock.BlockHeader.RawData.Number - currentBlockHeight
+		sub := nowBlock.BlockHeader.RawData.Number - currentBlockHeight
 		if sub == 1 {
 			parseBlockTrans(nowBlock, nowBlock.BlockHeader.RawData.Number)
 
@@ -96,11 +119,14 @@ func BlockScanStart(duration time.Duration) {
 		}
 
 		// 如果当前区块高度和上次扫描的区块高度差值超过1，说明存在区块丢失
-		var startBlockHeight = currentBlockHeight + 1
-		var endBlockHeight = nowBlock.BlockHeader.RawData.Number
+		startBlockHeight := currentBlockHeight + 1
+		endBlockHeight := nowBlock.BlockHeader.RawData.Number
 
 		// 扫描丢失的区块
-		blocks, err := client.GetBlockByLimitNext2(ctx, &api.BlockLimit{StartNum: startBlockHeight, EndNum: endBlockHeight})
+		blocks, err := client.GetBlockByLimitNext2(
+			ctx,
+			&api.BlockLimit{StartNum: startBlockHeight, EndNum: endBlockHeight},
+		)
 		if err != nil {
 			log.Warn("GetBlockByLimitNext2", err)
 
@@ -109,7 +135,6 @@ func BlockScanStart(duration time.Duration) {
 
 		// 扫描丢失区块
 		for _, block := range blocks.GetBlock() {
-
 			parseBlockTrans(block, block.BlockHeader.RawData.Number)
 		}
 	}
@@ -119,99 +144,99 @@ func BlockScanStart(duration time.Duration) {
 func parseBlockTrans(block *api.BlockExtention, nowHeight int64) {
 	currentBlockHeight = nowHeight
 
-	var resources = make([]resource, 0)
-	var transfers = make([]transfer, 0)
-	var timestamp = time.UnixMilli(block.GetBlockHeader().GetRawData().GetTimestamp())
+	resources := make([]resource, 0)
+	transfers := make([]transfer, 0)
+	timestamp := time.UnixMilli(block.GetBlockHeader().GetRawData().GetTimestamp())
 	for _, v := range block.GetTransactions() {
 		if !v.Result.Result {
-
 			continue
 		}
 
-		var itm = v.GetTransaction()
-		var id = hex.EncodeToString(v.Txid)
+		itm := v.GetTransaction()
+		id := hex.EncodeToString(v.Txid)
 		for _, contract := range itm.GetRawData().GetContract() {
 			// 资源代理 DelegateResourceContract
 			if contract.GetType() == core.Transaction_Contract_DelegateResourceContract {
-				var foo = &core.DelegateResourceContract{}
+				foo := &core.DelegateResourceContract{}
 				err := contract.GetParameter().UnmarshalTo(foo)
 				if err != nil {
-
 					continue
 				}
 
-				resources = append(resources, resource{
-					ID:           id,
-					Type:         core.Transaction_Contract_DelegateResourceContract,
-					Balance:      foo.Balance,
-					ResourceCode: foo.Resource,
-					FromAddress:  base58CheckEncode(foo.OwnerAddress),
-					RecvAddress:  base58CheckEncode(foo.ReceiverAddress),
-					Timestamp:    timestamp,
-				})
+				resources = append(
+					resources, resource{
+						ID:           id,
+						Type:         core.Transaction_Contract_DelegateResourceContract,
+						Balance:      foo.Balance,
+						ResourceCode: foo.Resource,
+						FromAddress:  base58CheckEncode(foo.OwnerAddress),
+						RecvAddress:  base58CheckEncode(foo.ReceiverAddress),
+						Timestamp:    timestamp,
+					},
+				)
 			}
 
 			// 资源回收 UnDelegateResourceContract
 			if contract.GetType() == core.Transaction_Contract_UnDelegateResourceContract {
-				var foo = &core.UnDelegateResourceContract{}
+				foo := &core.UnDelegateResourceContract{}
 				err := contract.GetParameter().UnmarshalTo(foo)
 				if err != nil {
-
 					continue
 				}
 
-				resources = append(resources, resource{
-					ID:           id,
-					Type:         core.Transaction_Contract_UnDelegateResourceContract,
-					Balance:      foo.Balance,
-					ResourceCode: foo.Resource,
-					FromAddress:  base58CheckEncode(foo.OwnerAddress),
-					RecvAddress:  base58CheckEncode(foo.ReceiverAddress),
-					Timestamp:    timestamp,
-				})
+				resources = append(
+					resources, resource{
+						ID:           id,
+						Type:         core.Transaction_Contract_UnDelegateResourceContract,
+						Balance:      foo.Balance,
+						ResourceCode: foo.Resource,
+						FromAddress:  base58CheckEncode(foo.OwnerAddress),
+						RecvAddress:  base58CheckEncode(foo.ReceiverAddress),
+						Timestamp:    timestamp,
+					},
+				)
 			}
 
 			// TRX转账交易
 			if contract.GetType() == core.Transaction_Contract_TransferContract {
-				var foo = &core.TransferContract{}
+				foo := &core.TransferContract{}
 				err := contract.GetParameter().UnmarshalTo(foo)
 				if err != nil {
-
 					continue
 				}
 
-				transfers = append(transfers, transfer{
-					ID:          id,
-					Amount:      float64(foo.Amount),
-					FromAddress: base58CheckEncode(foo.OwnerAddress),
-					RecvAddress: base58CheckEncode(foo.ToAddress),
-					Timestamp:   timestamp,
-					TradeType:   model.OrderTradeTypeTronTrx,
-				})
+				transfers = append(
+					transfers, transfer{
+						ID:          id,
+						Amount:      float64(foo.Amount),
+						FromAddress: base58CheckEncode(foo.OwnerAddress),
+						RecvAddress: base58CheckEncode(foo.ToAddress),
+						Timestamp:   timestamp,
+						TradeType:   model.OrderTradeTypeTronTrx,
+					},
+				)
 
 				continue
 			}
 
 			// 触发智能合约
 			if contract.GetType() == core.Transaction_Contract_TriggerSmartContract {
-				var foo = &core.TriggerSmartContract{}
+				foo := &core.TriggerSmartContract{}
 				err := contract.GetParameter().UnmarshalTo(foo)
 				if err != nil {
-
 					continue
 				}
 
-				var transItem = transfer{Timestamp: timestamp, ID: id, FromAddress: base58CheckEncode(foo.OwnerAddress)}
-				var reader = bytes.NewReader(foo.GetData())
+				transItem := transfer{Timestamp: timestamp, ID: id, FromAddress: base58CheckEncode(foo.OwnerAddress)}
+				reader := bytes.NewReader(foo.GetData())
 				if !bytes.Equal(foo.GetContractAddress(), usdtTrc20ContractAddress) { // usdt trc20 contract
 
 					continue
 				}
 
 				// 解析合约数据
-				var trc20Contract = parseUsdtTrc20Contract(reader)
+				trc20Contract := parseUsdtTrc20Contract(reader)
 				if trc20Contract.Amount == 0 {
-
 					continue
 				}
 
@@ -237,7 +262,7 @@ func parseBlockTrans(block *api.BlockExtention, nowHeight int64) {
 
 // parseUsdtTrc20Contract 解析usdt trc20合约
 func parseUsdtTrc20Contract(reader *bytes.Reader) usdtTrc20TransferRaw {
-	var funcName = make([]byte, 4)
+	funcName := make([]byte, 4)
 	_, err = reader.Read(funcName)
 	if err != nil {
 		// 读取funcName失败
@@ -250,7 +275,7 @@ func parseUsdtTrc20Contract(reader *bytes.Reader) usdtTrc20TransferRaw {
 		return usdtTrc20TransferRaw{}
 	}
 
-	var addressBytes = make([]byte, 20)
+	addressBytes := make([]byte, 20)
 	_, err = reader.ReadAt(addressBytes, 4+12)
 	if err != nil {
 		// 读取toAddress失败
@@ -258,8 +283,8 @@ func parseUsdtTrc20Contract(reader *bytes.Reader) usdtTrc20TransferRaw {
 		return usdtTrc20TransferRaw{}
 	}
 
-	var toAddress = base58CheckEncode(append([]byte{0x41}, addressBytes...))
-	var value = make([]byte, 32)
+	toAddress := base58CheckEncode(append([]byte{0x41}, addressBytes...))
+	value := make([]byte, 32)
 	_, err = reader.ReadAt(value, 36)
 	if err != nil {
 		// 读取value失败
@@ -267,14 +292,14 @@ func parseUsdtTrc20Contract(reader *bytes.Reader) usdtTrc20TransferRaw {
 		return usdtTrc20TransferRaw{}
 	}
 
-	var amount, _ = strconv.ParseInt(hex.EncodeToString(value), 16, 64)
+	amount, _ := strconv.ParseInt(hex.EncodeToString(value), 16, 64)
 
 	return usdtTrc20TransferRaw{RecvAddress: toAddress, Amount: float64(amount)}
 }
 
 // handleOrderTransaction 处理支付交易
 func handleOrderTransaction(refBlockNum, nowHeight int64, transfers []transfer) []transfer {
-	var orders, err = getAllPendingOrders()
+	orders, err := getAllPendingOrders()
 	var notOrderTransfers []transfer
 	if err != nil {
 		log.Error(err.Error())
@@ -284,11 +309,10 @@ func handleOrderTransaction(refBlockNum, nowHeight int64, transfers []transfer) 
 
 	for _, t := range transfers {
 		// 计算交易金额
-		var amount, quant = parseTransAmount(t.Amount)
+		amount, quant := parseTransAmount(t.Amount)
 
 		// 判断金额是否在允许范围内
 		if !inPaymentAmountRange(amount) {
-
 			continue
 		}
 
@@ -308,32 +332,28 @@ func handleOrderTransaction(refBlockNum, nowHeight int64, transfers []transfer) 
 		}
 
 		// 更新订单交易信息
-		var err = order.OrderUpdateTxInfo(refBlockNum, t.FromAddress, t.ID, t.Timestamp)
+		err := order.OrderUpdateTxInfo(refBlockNum, t.FromAddress, t.ID, t.Timestamp)
 		if err != nil {
-
 			log.Error("OrderUpdateTxInfo", err)
 		}
 	}
 
 	for _, order := range orders {
 		if order.RefBlockNum == 0 || order.TradeHash == "" {
-
 			continue
 		}
 
 		// 判断交易是否需要被确认
 		var confirmedSub int64 = 0
 		if config.GetTradeConfirmed() {
-
 			confirmedSub = blockHeightNumConfirmedSub
 		}
 
 		if nowHeight-order.RefBlockNum <= confirmedSub {
-
 			continue
 		}
 
-		var err = order.OrderSetSucc()
+		err := order.OrderSetSucc()
 		if err != nil {
 			log.Error("OrderSetSucc", err)
 
@@ -350,34 +370,32 @@ func handleOrderTransaction(refBlockNum, nowHeight int64, transfers []transfer) 
 // handleOtherNotify 处理其他通知
 func handleOtherNotify(items []transfer) {
 	var ads []model.WalletAddress
-	var tx = model.DB.Where("status = ? and other_notify = ?", model.StatusEnable, model.OtherNotifyEnable).Find(&ads)
+	tx := model.DB.Where("status = ? and other_notify = ?", model.StatusEnable, model.OtherNotifyEnable).Find(&ads)
 	if tx.RowsAffected <= 0 {
-
 		return
 	}
 
 	for _, wa := range ads {
 		for _, trans := range items {
 			if trans.RecvAddress != wa.Address && trans.FromAddress != wa.Address {
-
 				continue
 			}
 
-			var _, amount = parseTransAmount(trans.Amount)
-			var detailUrl = "https://tronscan.org/#/transaction/" + trans.ID
+			_, amount := parseTransAmount(trans.Amount)
+			detailUrl := "https://tronscan.org/#/transaction/" + trans.ID
 			if !model.IsNeedNotifyByTxid(trans.ID) {
 				// 不需要额外通知
 
 				continue
 			}
 
-			var title = "收入"
+			title := "收入"
 			if trans.RecvAddress != wa.Address {
 				title = "支出"
 			}
 
-			var transferUnit = "USDT.TRC20"
-			var transferType = "USDT"
+			transferUnit := "USDT.TRC20"
+			transferType := "USDT"
 			if trans.TradeType == model.OrderTradeTypeTronTrx {
 				transferUnit = "TRX"
 				transferType = "TRX"
@@ -386,16 +404,14 @@ func handleOtherNotify(items []transfer) {
 			{
 				// 忽视小额非订单交易监控通知，暂时写死，等待后续优化
 				if trans.TradeType == model.OrderTradeTypeTronTrx && cast.ToFloat64(amount) < 0.01 {
-
 					continue
 				}
 				if trans.TradeType == model.OrderTradeTypeUsdtTrc20 && cast.ToFloat64(amount) < 0.0001 {
-
 					continue
 				}
 			}
 
-			var text = fmt.Sprintf(
+			text := fmt.Sprintf(
 				"#账户%s #非订单交易 #"+transferType+"\n---\n```\n💲交易数额：%v "+transferUnit+"\n⏱️交易时间：%v\n✅接收地址：%v\n🅾️发送地址：%v```\n",
 				title,
 				amount,
@@ -404,13 +420,17 @@ func handleOtherNotify(items []transfer) {
 				help.MaskAddress(trans.FromAddress),
 			)
 
-			var chatId, err = strconv.ParseInt(config.GetTgBotNotifyTarget(), 10, 64)
-			if err != nil {
+			notifyId, ok := getNotifyId()
+			if !ok {
+				return
+			}
 
+			chatId, err := strconv.ParseInt(notifyId, 10, 64)
+			if err != nil {
 				continue
 			}
 
-			var msg = tgbotapi.NewMessage(chatId, text)
+			msg := tgbotapi.NewMessage(chatId, text)
 			msg.ParseMode = tgbotapi.ModeMarkdown
 			msg.ReplyMarkup = tgbotapi.InlineKeyboardMarkup{
 				InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
@@ -420,7 +440,7 @@ func handleOtherNotify(items []transfer) {
 				},
 			}
 
-			var _record = model.NotifyRecord{Txid: trans.ID}
+			_record := model.NotifyRecord{Txid: trans.ID}
 			model.DB.Create(&_record)
 
 			go telegram.SendMsg(msg)
@@ -431,50 +451,51 @@ func handleOtherNotify(items []transfer) {
 // handleResourceNotify 处理资源通知
 func handleResourceNotify(items []resource) {
 	var ads []model.WalletAddress
-	var tx = model.DB.Where("status = ? and other_notify = ?", model.StatusEnable, model.OtherNotifyEnable).Find(&ads)
+	tx := model.DB.Where("status = ? and other_notify = ?", model.StatusEnable, model.OtherNotifyEnable).Find(&ads)
 	if tx.RowsAffected <= 0 {
-
 		return
 	}
 
 	for _, wa := range ads {
 		for _, trans := range items {
 			if trans.RecvAddress != wa.Address && trans.FromAddress != wa.Address {
-
 				continue
 			}
 
 			if trans.ResourceCode != core.ResourceCode_ENERGY {
-
 				continue
 			}
 
-			var detailUrl = "https://tronscan.org/#/transaction/" + trans.ID
+			detailUrl := "https://tronscan.org/#/transaction/" + trans.ID
 			if !model.IsNeedNotifyByTxid(trans.ID) {
 				// 不需要额外通知
 
 				continue
 			}
 
-			var title = "代理"
+			title := "代理"
 			if trans.Type == core.Transaction_Contract_UnDelegateResourceContract {
 				title = "回收"
 			}
 
-			var text = fmt.Sprintf(
+			text := fmt.Sprintf(
 				"#资源动态 #能量"+title+"\n---\n```\n🔋质押数量："+cast.ToString(trans.Balance/1000000)+"\n⏱️交易时间：%v\n✅操作地址：%v\n🅾️资源来源：%v```\n",
 				trans.Timestamp.Format(time.DateTime),
 				help.MaskAddress(trans.RecvAddress),
 				help.MaskAddress(trans.FromAddress),
 			)
 
-			var chatId, err = strconv.ParseInt(config.GetTgBotNotifyTarget(), 10, 64)
-			if err != nil {
-
+			notifyId, ok := getNotifyId()
+			if !ok {
 				continue
 			}
 
-			var msg = tgbotapi.NewMessage(chatId, text)
+			chatId, err := strconv.ParseInt(notifyId, 10, 64)
+			if err != nil {
+				continue
+			}
+
+			msg := tgbotapi.NewMessage(chatId, text)
 			msg.ParseMode = tgbotapi.ModeMarkdown
 			msg.ReplyMarkup = tgbotapi.InlineKeyboardMarkup{
 				InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
@@ -484,7 +505,7 @@ func handleResourceNotify(items []resource) {
 				},
 			}
 
-			var _record = model.NotifyRecord{Txid: trans.ID}
+			_record := model.NotifyRecord{Txid: trans.ID}
 			model.DB.Create(&_record)
 
 			go telegram.SendMsg(msg)
@@ -505,11 +526,10 @@ func base58CheckEncode(input []byte) string {
 func getAllPendingOrders() (map[string]model.TradeOrders, error) {
 	tradeOrders, err := model.GetTradeOrderByStatus(model.OrderStatusWaiting)
 	if err != nil {
-
 		return nil, fmt.Errorf("待支付订单获取失败: %w", err)
 	}
 
-	var lock = make(map[string]model.TradeOrders) // 当前所有正在等待支付的订单 Lock Key
+	lock := make(map[string]model.TradeOrders) // 当前所有正在等待支付的订单 Lock Key
 	for _, order := range tradeOrders {
 		if time.Now().Unix() >= order.ExpiredAt.Unix() { // 订单过期
 			err := order.OrderSetExpired()
@@ -530,9 +550,24 @@ func getAllPendingOrders() (map[string]model.TradeOrders, error) {
 
 // 解析交易金额
 func parseTransAmount(amount float64) (decimal.Decimal, string) {
-	var _decimalAmount = decimal.NewFromFloat(amount)
-	var _decimalDivisor = decimal.NewFromFloat(1000000)
-	var result = _decimalAmount.Div(_decimalDivisor)
+	_decimalAmount := decimal.NewFromFloat(amount)
+	_decimalDivisor := decimal.NewFromFloat(1000000)
+	result := _decimalAmount.Div(_decimalDivisor)
 
 	return result, result.String()
+}
+
+func getNotifyId() (string, bool) {
+	var targetId string
+	botConfig := config.GetTgBot()
+	if botConfig.GroupId != "" {
+		targetId = botConfig.GroupId
+	}
+	if targetId == "" && botConfig.AdminId != "" {
+		targetId = botConfig.AdminId
+	}
+	if targetId == "" {
+		return "", false
+	}
+	return targetId, true
 }

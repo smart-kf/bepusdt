@@ -3,16 +3,20 @@ package model
 import (
 	"errors"
 	"fmt"
+	"time"
+
+	"gorm.io/gorm"
+
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/help"
-	"gorm.io/gorm"
-	"time"
 )
 
-const StatusEnable = 1
-const StatusDisable = 0
-const OtherNotifyEnable = 1
-const OtherNotifyDisable = 0
+const (
+	StatusEnable       = 1
+	StatusDisable      = 0
+	OtherNotifyEnable  = 1
+	OtherNotifyDisable = 0
+)
 
 type WalletAddress struct {
 	Id          int64     `gorm:"integer;primaryKey;not null;comment:id"`
@@ -29,20 +33,21 @@ func addStartWalletAddress() {
 
 	for _, address := range config.GetInitWalletAddress() {
 		if help.IsValidTRONWalletAddress(address) {
-			var _res2 = DB.Where("address = ?", address).First(&_wa)
+			_res2 := DB.Where("address = ?", address).First(&_wa)
 			if errors.Is(_res2.Error, gorm.ErrRecordNotFound) {
-				var _row = WalletAddress{Address: address, Status: StatusEnable}
-				var _res = DB.Create(&_row)
+				_row := WalletAddress{Address: address, Status: StatusEnable}
+				_res := DB.Create(&_row)
 				if _res.Error == nil && _res.RowsAffected == 1 {
 					fmt.Println("✅钱包地址添加成功：", address)
 				}
 			}
+		} else {
+			fmt.Println("X 钱包地址添加失败：", address)
 		}
 	}
 }
 
 func (wa *WalletAddress) TableName() string {
-
 	return "wallet_address"
 }
 
@@ -71,9 +76,8 @@ func GetAvailableAddress() []WalletAddress {
 
 func GetOtherNotify(address string) bool {
 	var row WalletAddress
-	var res = DB.Where("status = ? and address = ?", StatusEnable, address).First(&row)
+	res := DB.Where("status = ? and address = ?", StatusEnable, address).First(&row)
 	if res.Error != nil {
-
 		return false
 	}
 

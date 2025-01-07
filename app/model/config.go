@@ -6,7 +6,6 @@ type Config struct {
 }
 
 func (c Config) TableName() string {
-
 	return "config"
 }
 
@@ -17,9 +16,8 @@ func SetK(k, v string) {
 func GetK(k string) string {
 	var row Config
 
-	var tx = DB.Where("k = ?", k).First(&row)
+	tx := DB.Where("k = ?", k).First(&row)
 	if tx.Error == nil {
-
 		return row.V
 	}
 

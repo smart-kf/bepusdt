@@ -2,11 +2,13 @@ package telegram
 
 import (
 	"fmt"
+	"strings"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/model"
-	"strings"
 )
 
 func HandleMessage(msg *tgbotapi.Message) {
@@ -17,7 +19,6 @@ func HandleMessage(msg *tgbotapi.Message) {
 	}
 
 	if msg.ReplyToMessage != nil && msg.ReplyToMessage.Text == replayAddressText {
-
 		addWalletAddress(msg)
 	}
 
@@ -27,13 +28,13 @@ func HandleMessage(msg *tgbotapi.Message) {
 }
 
 func HandleCallback(query *tgbotapi.CallbackQuery) {
-	if fmt.Sprintf("%v", query.From.ID) != config.GetTGBotAdminId() {
-
+	adminId := config.GetTgBot().AdminId
+	if fmt.Sprintf("%v", query.From.ID) != adminId {
 		return
 	}
 
 	var args []string
-	var act = query.Data
+	act := query.Data
 	if strings.Contains(query.Data, "|") {
 		args = strings.Split(query.Data, "|")
 		act = args[0]
@@ -60,7 +61,7 @@ func HandleCallback(query *tgbotapi.CallbackQuery) {
 }
 
 func addWalletAddress(msg *tgbotapi.Message) {
-	var address = strings.TrimSpace(msg.Text)
+	address := strings.TrimSpace(msg.Text)
 	// 简单检测地址是否合法
 	if !help.IsValidTRONWalletAddress(address) {
 		SendMsg(tgbotapi.NewMessage(msg.Chat.ID, "钱包地址不合法"))
@@ -68,8 +69,8 @@ func addWalletAddress(msg *tgbotapi.Message) {
 		return
 	}
 
-	var wa = model.WalletAddress{Address: address, Status: model.StatusEnable}
-	var r = model.DB.Create(&wa)
+	wa := model.WalletAddress{Address: address, Status: model.StatusEnable}
+	r := model.DB.Create(&wa)
 	if r.Error != nil {
 		if r.Error.Error() == "UNIQUE constraint failed: wallet_address.address" {
 			SendMsg(tgbotapi.NewMessage(msg.Chat.ID, "❌地址添加失败，地址重复！"))
@@ -88,12 +89,12 @@ func addWalletAddress(msg *tgbotapi.Message) {
 
 func botCommandHandle(_msg *tgbotapi.Message) {
 	if _msg.Command() == cmdGetId {
-
 		go cmdGetIdHandle(_msg)
 	}
 
-	if fmt.Sprintf("%v", _msg.Chat.ID) != config.GetTGBotAdminId() {
+	adminId := config.GetTgBot().AdminId
 
+	if fmt.Sprintf("%v", _msg.Chat.ID) != adminId {
 		return
 	}
 
@@ -110,8 +111,8 @@ func botCommandHandle(_msg *tgbotapi.Message) {
 }
 
 func queryAnyTrc20AddressInfo(msg *tgbotapi.Message, address string) {
-	var info = getWalletInfoByAddress(address)
-	var reply = tgbotapi.NewMessage(msg.Chat.ID, "❌查询失败")
+	info := getWalletInfoByAddress(address)
+	reply := tgbotapi.NewMessage(msg.Chat.ID, "❌查询失败")
 	if info != "" {
 		reply.ReplyToMessageID = msg.MessageID
 		reply.Text = info

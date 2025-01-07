@@ -1,59 +1,21 @@
 package rate
 
 import (
+	"regexp"
+
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cast"
-	"github.com/v03413/bepusdt/app/config"
+
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/log"
-	"regexp"
 )
-
-var okxTrxCnyCalcRate = 0.0
-var okxUsdtCnyCalcRate = 0.0
-var okxUsdtCnyRawRate = config.DefaultUsdtCnyRate // okx 交易所 usdt 兑 cny原始汇率
-
-func GetTrxCnyCalcRate(defaultRate float64) float64 {
-	if okxTrxCnyCalcRate > 0 {
-
-		return okxTrxCnyCalcRate
-	}
-
-	return defaultRate
-}
-
-func GetUsdtCalcRate(defaultRate float64) float64 {
-	if okxUsdtCnyCalcRate > 0 {
-
-		return okxUsdtCnyCalcRate
-	}
-
-	return defaultRate
-}
-
-func GetOkxUsdtRawRate() float64 {
-
-	return okxUsdtCnyRawRate
-}
-
-func SetOkxTrxUsdtRawRate(syntax string, rawRate float64) {
-
-	okxTrxCnyCalcRate = parseFloatRate(syntax, rawRate*okxUsdtCnyRawRate)
-}
-
-func SetOkxUsdtCnyRawRate(syntax string, rawRate float64) {
-	okxUsdtCnyRawRate = rawRate
-	okxUsdtCnyCalcRate = parseFloatRate(syntax, rawRate)
-}
 
 func parseFloatRate(syntax string, rawVal float64) float64 {
 	if syntax == "" {
-
 		return rawVal
 	}
 
 	if help.IsNumber(syntax) {
-
 		return cast.ToFloat64(syntax)
 	}
 
@@ -64,9 +26,9 @@ func parseFloatRate(syntax string, rawVal float64) float64 {
 		return 0
 	}
 
-	var act = syntax[0:1]
-	var raw = decimal.NewFromFloat(rawVal)
-	var base = decimal.NewFromFloat(cast.ToFloat64(syntax[1:]))
+	act := syntax[0:1]
+	raw := decimal.NewFromFloat(rawVal)
+	base := decimal.NewFromFloat(cast.ToFloat64(syntax[1:]))
 
 	switch act {
 	case "~":

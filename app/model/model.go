@@ -1,24 +1,26 @@
 package model
 
 import (
-	"github.com/glebarez/sqlite"
-	"github.com/v03413/bepusdt/app/config"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	"github.com/v03413/bepusdt/app/config"
 )
 
-var DB *gorm.DB
-var _err error
+var (
+	DB   *gorm.DB
+	_err error
+)
 
 func Init() error {
-	DB, _err = gorm.Open(sqlite.Open(config.GetDbPath()), &gorm.Config{})
-	if _err != nil {
-
-		return _err
-
+	db, err := gorm.Open(mysql.Open(config.GetConfig().DB.Dsn), &gorm.Config{})
+	if err != nil {
+		return err
 	}
 
-	if _err = AutoMigrate(); _err != nil {
+	DB = db
 
+	if _err = AutoMigrate(); _err != nil {
 		return _err
 	}
 
@@ -28,6 +30,5 @@ func Init() error {
 }
 
 func AutoMigrate() error {
-
 	return DB.AutoMigrate(&WalletAddress{}, &TradeOrders{}, &NotifyRecord{}, &Config{})
 }

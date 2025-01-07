@@ -2,21 +2,19 @@ package telegram
 
 import (
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/v03413/bepusdt/app/config"
 	"strconv"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"github.com/v03413/bepusdt/app/config"
 )
 
-var botApi *tgbotapi.BotAPI
-var err error
+var (
+	botApi *tgbotapi.BotAPI
+	err    error
+)
 
-func init() {
-	var token = config.GetTGBotToken()
-	if token == "" {
-
-		return
-	}
-
+func InitBot(token string) {
 	botApi, err = tgbotapi.NewBotAPI(token)
 	if err != nil {
 		panic("TG Bot NewBotAPI Error:" + err.Error())
@@ -25,13 +23,17 @@ func init() {
 	}
 
 	// 注册命令
-	_, err = botApi.Request(tgbotapi.NewSetMyCommands([]tgbotapi.BotCommand{
-		{Command: "/" + cmdGetId, Description: "获取ID"},
-		{Command: "/" + cmdStart, Description: "开始使用"},
-		{Command: "/" + cmdUsdt, Description: "实时汇率"},
-		{Command: "/" + cmdWallet, Description: "钱包信息"},
-		{Command: "/" + cmdOrder, Description: "最近订单"},
-	}...))
+	_, err = botApi.Request(
+		tgbotapi.NewSetMyCommands(
+			[]tgbotapi.BotCommand{
+				{Command: "/" + cmdGetId, Description: "获取ID"},
+				{Command: "/" + cmdStart, Description: "开始使用"},
+				{Command: "/" + cmdUsdt, Description: "实时汇率"},
+				{Command: "/" + cmdWallet, Description: "钱包信息"},
+				{Command: "/" + cmdOrder, Description: "最近订单"},
+			}...,
+		),
+	)
 	if err != nil {
 		panic("TG Bot Request Error:" + err.Error())
 
@@ -42,18 +44,23 @@ func init() {
 }
 
 func GetBotApi() *tgbotapi.BotAPI {
-
 	return botApi
 }
 
 func SendMsg(msg tgbotapi.MessageConfig) {
+	bot := config.GetTgBot()
+	if !bot.Enable {
+		return
+	}
 	if msg.ChatID != 0 {
 		_, _ = botApi.Send(msg)
 
 		return
 	}
 
-	var chatId, err = strconv.ParseInt(config.GetTGBotAdminId(), 10, 64)
+	botConfig := config.GetTgBot()
+
+	chatId, err := strconv.ParseInt(botConfig.AdminId, 10, 64)
 	if err == nil {
 		msg.ChatID = chatId
 		_, _ = botApi.Send(msg)
@@ -61,14 +68,22 @@ func SendMsg(msg tgbotapi.MessageConfig) {
 }
 
 func DeleteMsg(msgId int) {
-	var chatId, err = strconv.ParseInt(config.GetTGBotAdminId(), 10, 64)
+	botConfig := config.GetTgBot()
+	if !botConfig.Enable {
+		return
+	}
+	chatId, err := strconv.ParseInt(botConfig.AdminId, 10, 64)
 	if err == nil {
 		_, _ = botApi.Send(tgbotapi.NewDeleteMessage(chatId, msgId))
 	}
 }
 
 func EditAndSendMsg(msgId int, text string, replyMarkup tgbotapi.InlineKeyboardMarkup) {
-	var chatId, err = strconv.ParseInt(config.GetTGBotAdminId(), 10, 64)
+	botConfig := config.GetTgBot()
+	if !botConfig.Enable {
+		return
+	}
+	chatId, err := strconv.ParseInt(botConfig.AdminId, 10, 64)
 	if err == nil {
 		_, _ = botApi.Send(tgbotapi.NewEditMessageTextAndMarkup(chatId, msgId, text, replyMarkup))
 	}

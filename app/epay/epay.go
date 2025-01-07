@@ -4,18 +4,19 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"sort"
+
 	"github.com/spf13/cast"
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/model"
-	"sort"
 )
 
 const Pid = "1000" // 固定商户号
 
 func Sign(params map[string]string, key string) string {
 	// 提取 keys 并排序
-	var keys = make([]string, 0, len(params))
+	keys := make([]string, 0, len(params))
 	for k := range params {
 		keys = append(keys, k)
 	}
@@ -41,10 +42,10 @@ func Sign(params map[string]string, key string) string {
 }
 
 func BuildNotifyParams(order model.TradeOrders) string {
-	var query = fmt.Sprintf("money=%s&name=%s&out_trade_no=%s&pid=%s&trade_no=%s&trade_status=TRADE_SUCCESS&type=%s",
+	query := fmt.Sprintf("money=%s&name=%s&out_trade_no=%s&pid=%s&trade_no=%s&trade_status=TRADE_SUCCESS&type=%s",
 		cast.ToString(order.Money), order.Name, order.OrderId, Pid, order.TradeId, order.TradeType)
 
-	var sign = help.Md5String(query + config.GetAuthToken())
+	sign := help.Md5String(query + config.GetAuthToken())
 
 	return fmt.Sprintf("%s&sign=%s", query, sign)
 }

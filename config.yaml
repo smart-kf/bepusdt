@@ -1,0 +1,22 @@
+db:
+  dsn:  "root:124x8Xawdasdx1r140xs$@tcp(localhost:3306)/bepusdt?charset=utf8mb4&parseTime=True&loc=PRC"
+  driver: mysql
+
+
+tronGrpcNode: 18.141.79.38:50051
+usdtAtom: "0.01"  # usdt 精度
+trxAtom: "0.01"   # trx 精度
+minPay: 0.01      # 最低支付金额
+maxPay: 9999      # 最多支付
+expireTime: 600   # 默认支付超时时间
+
+usdtRate: "7.2"     # 固定比例. 不设置则从交易所获取
+trxRate: "0.95"          # 固定比例. 不设置则从交易所获取
+
+authToken: "123"  # api token
+listenAddress: '127.0.0.1:8082'
+tradeConfirm: false # 交易是否需要确认,
+appUrl: "http://localhost:8082"
+staticPath: './static'
+walletAddress:
+  - TRKenLUF8HsifWLTgQaZBErLJW9UnMzPTS

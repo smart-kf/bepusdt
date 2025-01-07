@@ -2,29 +2,48 @@ package telegram
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/model"
-	"strconv"
-	"time"
 )
 
+func getNotifyId() (string, bool) {
+	var targetId string
+	botConfig := config.GetTgBot()
+	if botConfig.GroupId != "" {
+		targetId = botConfig.GroupId
+	}
+	if targetId == "" && botConfig.AdminId != "" {
+		targetId = botConfig.AdminId
+	}
+	if targetId == "" {
+		return "", false
+	}
+	return targetId, true
+}
 func SendTradeSuccMsg(order model.TradeOrders) {
-	var chatId, err = strconv.ParseInt(config.GetTgBotNotifyTarget(), 10, 64)
+	var targetId, ok = getNotifyId()
+	if !ok {
+		return
+	}
+	chatId, err := strconv.ParseInt(targetId, 10, 64)
 	if err != nil {
-
 		return
 	}
 
-	var tradeType = "USDT"
-	var tradeUnit = `USDT.TRC20`
+	tradeType := "USDT"
+	tradeUnit := `USDT.TRC20`
 	if order.TradeType == model.OrderTradeTypeTronTrx {
 		tradeType = "TRX"
 		tradeUnit = "TRX"
 	}
 
-	var text = `
+	text := `
 #收款成功 #订单交易 #` + tradeType + `
 ---
 ` + "```" + `
@@ -36,7 +55,8 @@ func SendTradeSuccMsg(order model.TradeOrders) {
 ️🎯️支付时间：%s
 ` + "```" + `
 `
-	text = fmt.Sprintf(text,
+	text = fmt.Sprintf(
+		text,
 		order.OrderId,
 		order.Money,
 		order.TradeRate,
@@ -45,12 +65,15 @@ func SendTradeSuccMsg(order model.TradeOrders) {
 		order.CreatedAt.Format(time.DateTime),
 		order.UpdatedAt.Format(time.DateTime),
 	)
-	var msg = tgbotapi.NewMessage(chatId, text)
+	msg := tgbotapi.NewMessage(chatId, text)
 	msg.ParseMode = tgbotapi.ModeMarkdown
 	msg.ReplyMarkup = tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
 			{
-				tgbotapi.NewInlineKeyboardButtonURL("📝查看交易明细", "https://tronscan.org/#/transaction/"+order.TradeHash),
+				tgbotapi.NewInlineKeyboardButtonURL(
+					"📝查看交易明细",
+					"https://tronscan.org/#/transaction/"+order.TradeHash,
+				),
 			},
 		},
 	}
@@ -59,28 +82,30 @@ func SendTradeSuccMsg(order model.TradeOrders) {
 }
 
 func SendOtherNotify(text string) {
-	var chatId, err = strconv.ParseInt(config.GetTgBotNotifyTarget(), 10, 64)
+	var targetId, ok = getNotifyId()
+	if !ok {
+		return
+	}
+	chatId, err := strconv.ParseInt(targetId, 10, 64)
 	if err != nil {
-
 		return
 	}
 
-	var msg = tgbotapi.NewMessage(chatId, text)
+	msg := tgbotapi.NewMessage(chatId, text)
 	msg.ParseMode = tgbotapi.ModeMarkdown
 
 	_, _ = botApi.Send(msg)
 }
 
 func SendWelcome(version string) {
-	var text = `
-👋 欢迎使用 Bepusdt，一款更好用的个人USDT收款网关，如果您看到此消息，说明机器人已经启动成功
+	text := `
+👋 如果您看到此消息，说明机器人已经启动成功
 
 📌当前版本：` + version + `
 📝发送命令 /start 可以开始使用
-🎉开源地址 https://github.com/v03413/bepusdt
 ---
 `
-	var msg = tgbotapi.NewMessage(0, text)
+	msg := tgbotapi.NewMessage(0, text)
 
 	SendMsg(msg)
 }

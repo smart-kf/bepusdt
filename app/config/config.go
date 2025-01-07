@@ -2,272 +2,157 @@ package config
 
 import (
 	"errors"
-	"github.com/shopspring/decimal"
-	"github.com/spf13/cast"
-	"github.com/v03413/bepusdt/app/help"
+	"log"
 	"math"
-	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/make-money-fast/xconfig"
+	"github.com/shopspring/decimal"
+	"github.com/spf13/cast"
+
+	"github.com/v03413/bepusdt/app/help"
 )
 
-const defaultExpireTime = 600     // 订单默认有效期 10分钟
-const DefaultUsdtCnyRate = 6.4    // 默认USDT汇率
-const DefaultTrxCnyRate = 0.95    // 默认TRX汇率
-const defaultAuthToken = "123234" // 默认授权码
-const defaultListen = ":8080"     // 默认监听地址
-const defaultPaymentMinAmount = 0.01
-const defaultPaymentMaxAmount = 99999
-const defaultUsdtAtomicity = "0.01" // 原子精度
-const defaultTrxAtomicity = "0.01"
-const defaultTronGrpcNode = "18.141.79.38:50051" // 默认GRPC节点
+var (
+	_config *config
+)
 
-var runPath string
+type config struct {
+	TronGrpcNode  string      `json:"tronGrpcNode" default:"18.141.79.38:50051"` //  TRON_GRPC_NODE
+	UsdtAtom      string      `json:"usdtAtom" default:"0.01"`                   // 精度
+	TrxAtom       string      `json:"trxAtom" default:"0.01"`                    // trx 精度
+	MinPay        float64     `json:"minPay" default:"0.01"`                     // 最低支付金额
+	MaxPay        float64     `json:"maxPay" default:"99999"`                    // 最多支付
+	ExpireTime    int         `json:"expireTime" default:"expireTime"`           // 默认支付超时时间
+	UsdtRate      string      `json:"usdtRate"`                                  // usdt Rate, 配置了则是默认比例，否则从交易所获取
+	TrxRate       string      `json:"trxRate"`                                   // trx rate 配置了则是默认比例，否则从交易所获取
+	AuthToken     string      `json:"authToken"`                                 // 交互的 token
+	ListenAddress string      `json:"listenAddress" default:"127.0.0.1:8082"`    // 监听地址
+	TradeConfirm  bool        `json:"tradeConfirm" default:"false"`              // 是否需要交易确认，保险
+	AppUrl        string      `json:"appUrl"`                                    // 收银台地址
+	StaticPath    string      `json:"staticPath" default:"./static"`             // 静态目录
+	WalletAddress []string    `json:"walletAddress"`                             // 钱包地址
+	TelegramBot   TelegramBot `json:"telegramBot"`
+	DB            DB          `json:"db"`
+}
 
-func init() {
-	execPath, err := os.Executable()
-	if err != nil {
+type DB struct {
+	Dsn string `json:"dsn"`
+}
 
-		panic(err)
-	}
+func GetConfig() *config {
+	return _config
+}
 
-	runPath = filepath.Dir(execPath)
+type TelegramBot struct {
+	Enable  bool   `json:"enable"`  // 是否启用
+	AdminId string `json:"adminId"` // 管理员id
+	Token   string `json:"token"`   // 机器人token
+	GroupId string `json:"groupId"` // 群id
 }
 
 func GetTronGrpcNode() string {
-	if data := help.GetEnv("TRON_GRPC_NODE"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return defaultTronGrpcNode
+	return _config.TronGrpcNode
 }
 
 func GetUsdtAtomicity() (decimal.Decimal, int) {
-	var defaultAtom, _ = decimal.NewFromString(defaultUsdtAtomicity)
-	var defaultExp = cast.ToInt(math.Abs(float64(defaultAtom.Exponent())))
-	if data := help.GetEnv("USDT_ATOM"); data != "" {
-		var atom, exp, err = parseAtomicity(data)
-		if err == nil {
-
-			return atom, exp
-		}
+	atom, exp, err := parseAtomicity(_config.UsdtAtom)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	return defaultAtom, defaultExp
+	return atom, exp
 }
 
 func GetTrxAtomicity() (decimal.Decimal, int) {
-	var defaultAtom, _ = decimal.NewFromString(defaultTrxAtomicity)
-	var defaultExp = cast.ToInt(math.Abs(float64(defaultAtom.Exponent())))
-	if data := help.GetEnv("TRX_ATOM"); data != "" {
-		var atom, exp, err = parseAtomicity(data)
-		if err == nil {
-
-			return atom, exp
-		}
+	atom, exp, err := parseAtomicity(_config.TrxAtom)
+	if err == nil {
+		log.Fatal(err)
 	}
-
-	return defaultAtom, defaultExp
+	return atom, exp
 }
 
 func GetPaymentMinAmount() decimal.Decimal {
-	var _default = decimal.NewFromFloat(defaultPaymentMinAmount)
-	var _min, _ = getPaymentRangeAmount()
-	if _min == "" {
-
-		return _default
-	}
-
-	_result, err := decimal.NewFromString(_min)
-	if err == nil {
-
-		return _result
-	}
-
-	return _default
+	_min := decimal.NewFromFloat(_config.MinPay)
+	return _min
 }
 
 func GetPaymentMaxAmount() decimal.Decimal {
-	var _default = decimal.NewFromFloat(defaultPaymentMaxAmount)
-	var _, _max = getPaymentRangeAmount()
-	if _max == "" {
-
-		return _default
-	}
-
-	_result, err := decimal.NewFromString(_max)
-	if err == nil {
-
-		return _result
-	}
-
-	return _default
-}
-
-func getPaymentRangeAmount() (string, string) {
-	var _rangeVar string
-	if _rangeVar = strings.TrimSpace(help.GetEnv("PAYMENT_AMOUNT_RANGE")); _rangeVar == "" {
-
-		return "", ""
-	}
-
-	var _payRange = strings.Split(_rangeVar, ",")
-	if len(_payRange) < 2 {
-
-		return "", ""
-	}
-
-	return _payRange[0], _payRange[1]
+	max := decimal.NewFromFloat(_config.MaxPay)
+	return max
 }
 
 func GetExpireTime() time.Duration {
-	if ret := help.GetEnv("EXPIRE_TIME"); ret != "" {
-		sec, err := strconv.Atoi(ret)
-		if err == nil && sec > 0 {
-
-			return time.Duration(sec)
-		}
-	}
-
-	return defaultExpireTime
+	return time.Duration(_config.ExpireTime) * time.Second
 }
 
 func GetUsdtRate() string {
-	if data := help.GetEnv("USDT_RATE"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return ""
+	return _config.UsdtRate
 }
 
 func GetTrxRate() string {
-	if data := help.GetEnv("TRX_RATE"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return ""
+	return _config.TrxRate
 }
 
 func GetAuthToken() string {
-	if data := help.GetEnv("AUTH_TOKEN"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return defaultAuthToken
+	return _config.AuthToken
 }
 
 func GetListen() string {
-	if data := help.GetEnv("LISTEN"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return defaultListen
+	return _config.ListenAddress
 }
 
 func GetTradeConfirmed() bool {
-	if data := help.GetEnv("TRADE_IS_CONFIRMED"); data != "" {
-		if data == "1" || data == "true" {
-
-			return true
-		}
-	}
-
-	return false
+	return _config.TradeConfirm
 }
 
 func GetAppUri(host string) string {
-	if data := help.GetEnv("APP_URI"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return host
+	return _config.AppUrl
 }
 
 func GetTGBotToken() string {
 	if data := help.GetEnv("TG_BOT_TOKEN"); data != "" {
-
 		return strings.TrimSpace(data)
 	}
 
 	return ""
 }
 
-func GetTGBotAdminId() string {
-	if data := help.GetEnv("TG_BOT_ADMIN_ID"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return ""
-}
-
-func GetTgBotGroupId() string {
-	if data := help.GetEnv("TG_BOT_GROUP_ID"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return ""
-}
-
-func GetTgBotNotifyTarget() string {
-	var groupId = GetTgBotGroupId()
-	if groupId != "" {
-
-		return groupId
-	}
-
-	return GetTGBotAdminId()
+func GetTgBot() TelegramBot {
+	return _config.TelegramBot
 }
 
 func GetOutputLog() string {
-
-	return runPath + "/bepusdt.log"
-}
-
-func GetDbPath() string {
-
-	return runPath + "/bepusdt.db"
+	return "/tmp/bepusdt.log"
 }
 
 func GetStaticPath() string {
-	if data := help.GetEnv("STATIC_PATH"); data != "" {
-
-		return strings.TrimSpace(data)
-	}
-
-	return ""
+	return _config.StaticPath
 }
 
 func GetInitWalletAddress() []string {
-	if data := help.GetEnv("WALLET_ADDRESS"); data != "" {
-
-		return strings.Split(strings.TrimSpace(data), ",")
-	}
-
-	return []string{}
+	return _config.WalletAddress
 }
 
 func parseAtomicity(data string) (decimal.Decimal, int, error) {
-	var atom, err = decimal.NewFromString(data)
+	atom, err := decimal.NewFromString(data)
 	if err != nil {
-
 		return decimal.Zero, 0, err
 	}
 
 	// 如果大于0，且小数点后位数大于0
 	if atom.GreaterThan(decimal.Zero) && atom.Exponent() < 0 {
-
 		return atom, cast.ToInt(math.Abs(float64(atom.Exponent()))), nil
 	}
 
 	return decimal.Zero, 0, errors.New("原子精度参数不合法")
+}
+
+func Load(filename string) {
+	var c config
+	err := xconfig.ParseFromFile(filename, &c)
+	if err != nil {
+		panic(err)
+	}
+	_config = &c
 }

@@ -1,16 +1,17 @@
 package log
 
 import (
-	"github.com/sirupsen/logrus"
-	"github.com/v03413/bepusdt/app/config"
 	"io"
 	"os"
+
+	"github.com/sirupsen/logrus"
+	"github.com/v03413/bepusdt/app/config"
 )
 
 var logger *logrus.Logger
 
 func init() {
-	var level, logFile = logrus.InfoLevel, config.GetOutputLog()
+	level, logFile := logrus.InfoLevel, config.GetOutputLog()
 	logger = logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
 		ForceColors:     true,
@@ -21,9 +22,8 @@ func init() {
 
 	logger.SetLevel(level)
 
-	output, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	output, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 	if err != nil {
-
 		panic(err)
 	}
 
@@ -31,26 +31,21 @@ func init() {
 }
 
 func Debug(args ...interface{}) {
-
 	logger.Debugln(args...)
 }
 
 func Info(args ...interface{}) {
-
 	logger.Infoln(args...)
 }
 
 func Error(args ...interface{}) {
-
 	logger.Errorln(args...)
 }
 
 func Warn(args ...interface{}) {
-
 	logger.Warnln(args...)
 }
 
 func GetWriter() *io.PipeWriter {
-
 	return logger.Writer()
 }

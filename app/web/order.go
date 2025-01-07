@@ -1,103 +1,133 @@
 package web
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/gin-gonic/gin"
+
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/epay"
 	"github.com/v03413/bepusdt/app/help"
+	"github.com/v03413/bepusdt/app/help/sign"
 	"github.com/v03413/bepusdt/app/log"
 	"github.com/v03413/bepusdt/app/model"
 	"github.com/v03413/bepusdt/app/rate"
-	"net/url"
-	"sync"
-	"time"
 )
+
+type CreateOrderRequest struct {
+	OrderId     string  `json:"order_id" binding:"required"`
+	Name        string  `json:"name" binding:"required"`
+	Amount      float64 `json:"amount" binding:"required"`
+	NotifyUrl   string  `json:"notify_url" binding:"required"`
+	RedirectUrl string  `json:"redirect_url" binding:"required"`
+	TradeType   string  `json:"tradeType" binding:"required"` // usdt-usdt  || cny-usdt || cny-trx || trx-trx
+	Sign        string  `json:"sign" binding:"required"`      // 签名.
+}
+
+func (r *CreateOrderRequest) Validate() error {
+	var mp = make(map[string]interface{})
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &mp)
+	if err != nil {
+		return err
+	}
+	if sign.ValidateSign(mp, config.GetAuthToken()) {
+		return nil
+	}
+
+	// tradeType.
+	switch r.TradeType {
+	case rate.Usdt2Usdt, rate.Cny2Trx, rate.Trx2Trx:
+	default:
+		return errors.New("tradeType 错误")
+	}
+
+	return fmt.Errorf("签名错误")
+}
 
 // createTransaction 创建订单
 func createTransaction(ctx *gin.Context) {
-	_data, _ := ctx.Get("data")
-	data := _data.(map[string]any)
-	orderId, ok1 := data["order_id"].(string)
-	money, ok2 := data["amount"].(float64)
-	notifyUrl, ok3 := data["notify_url"].(string)
-	redirectUrl, ok4 := data["redirect_url"].(string)
-	tradeType, _ := data["trade_type"].(string)
-	if tradeType != model.OrderTradeTypeTronTrx {
-		tradeType = model.OrderTradeTypeUsdtTrc20
+	var req CreateOrderRequest
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(200, respFailJson(fmt.Errorf("参数错误:"+err.Error())))
+		return
 	}
-	// ---
-	if !ok1 || !ok2 || !ok3 || !ok4 {
-		log.Warn("参数错误", data)
-		ctx.JSON(200, respFailJson(fmt.Errorf("参数错误")))
+	if err := req.Validate(); err != nil {
+		ctx.JSON(200, respFailJson(fmt.Errorf("参数错误:"+err.Error())))
 		return
 	}
 
 	// 解析请求地址
-	var host = "http://" + ctx.Request.Host
+	host := "http://" + ctx.Request.Host
 	if ctx.Request.TLS != nil {
 		host = "https://" + ctx.Request.Host
 	}
 
-	var order, err = buildOrder(money, model.OrderApiTypeEpusdt, orderId, tradeType, redirectUrl, notifyUrl, orderId)
+	order, err := buildOrder(
+		req.Amount,
+		model.OrderApiTypeEpusdt,
+		req.OrderId,
+		req.TradeType,
+		req.RedirectUrl,
+		req.NotifyUrl,
+		req.Name,
+	)
 	if err != nil {
 		ctx.JSON(200, respFailJson(fmt.Errorf("订单创建失败：%w", err)))
-
 		return
 	}
 
 	// 返回响应数据
-	ctx.JSON(200, respSuccJson(gin.H{
-		"trade_id":        order.TradeId,
-		"order_id":        orderId,
-		"amount":          money,
-		"actual_amount":   order.Amount,
-		"token":           order.Address,
-		"expiration_time": int64(order.ExpiredAt.Sub(time.Now()).Seconds()),
-		"payment_url":     fmt.Sprintf("%s/pay/checkout-counter/%s", config.GetAppUri(host), order.TradeId),
-	}))
-	log.Info(fmt.Sprintf("订单创建成功，商户订单号：%s", orderId))
+	ctx.JSON(
+		200, respSuccJson(
+			gin.H{
+				"trade_id":        order.TradeId,
+				"order_id":        req.OrderId,
+				"amount":          req.Amount,
+				"actual_amount":   order.Amount,
+				"token":           order.Address,
+				"expiration_time": int64(order.ExpiredAt.Sub(time.Now()).Seconds()),
+				"payment_url":     fmt.Sprintf("%s/pay/checkout-counter/%s", config.GetAppUri(host), order.TradeId),
+			},
+		),
+	)
+	log.Info(fmt.Sprintf("订单创建成功，商户订单号：%s", req.OrderId))
 }
 
-func buildOrder(money float64, apiType, orderId, tradeType, redirectUrl, notifyUrl, name string) (model.TradeOrders, error) {
-	var lock sync.Mutex
+func buildOrder(money float64, apiType, orderId, tradeType, redirectUrl, notifyUrl, name string) (
+	model.TradeOrders,
+	error,
+) {
 	var order model.TradeOrders
 
-	// 暂时先强制使用互斥锁，后续有需求的话再考虑优化
-	lock.Lock()
-	defer lock.Unlock()
-
-	// 获取兑换汇率
-	var calcRate = rate.GetUsdtCalcRate(config.DefaultUsdtCnyRate)
-	if tradeType == model.OrderTradeTypeTronTrx {
-
-		calcRate = rate.GetTrxCnyCalcRate(config.DefaultTrxCnyRate)
-	}
-
 	// 获取钱包地址
-	var wallet = model.GetAvailableAddress()
+	wallet := model.GetAvailableAddress()
 	if len(wallet) == 0 {
 		log.Error("订单创建失败：还没有配置收款地址")
-
 		return order, fmt.Errorf("还没有配置收款地址")
 	}
 
 	// 计算交易金额
-	address, amount := model.CalcTradeAmount(wallet, calcRate, money, tradeType)
+	address, amount := model.CalcTradeAmount(wallet, money, tradeType)
 	tradeId, err := help.GenerateTradeId()
 	if err != nil {
-
 		return order, err
 	}
 
 	// 创建交易订单
-	var expiredAt = time.Now().Add(config.GetExpireTime() * time.Second)
-	var tradeOrder = model.TradeOrders{
+	expiredAt := time.Now().Add(config.GetExpireTime())
+	tradeOrder := model.TradeOrders{
 		OrderId:     orderId,
 		TradeId:     tradeId,
 		TradeHash:   tradeId, // 这里默认填充一个本地交易ID，等支付成功后再更新为实际交易哈希
 		TradeType:   tradeType,
-		TradeRate:   fmt.Sprintf("%v", calcRate),
 		Amount:      amount,
 		Money:       money,
 		Address:     address.Address,
@@ -110,7 +140,7 @@ func buildOrder(money float64, apiType, orderId, tradeType, redirectUrl, notifyU
 		NotifyState: model.OrderNotifyStateFail,
 		ExpiredAt:   expiredAt,
 	}
-	var res = model.DB.Create(&tradeOrder)
+	res := model.DB.Create(&tradeOrder)
 	if res.Error != nil {
 		log.Error("订单创建失败：", res.Error.Error())
 
@@ -121,8 +151,8 @@ func buildOrder(money float64, apiType, orderId, tradeType, redirectUrl, notifyU
 }
 
 func checkoutCounter(ctx *gin.Context) {
-	var tradeId = ctx.Param("trade_id")
-	var order, ok = model.GetTradeOrder(tradeId)
+	tradeId := ctx.Param("trade_id")
+	order, ok := model.GetTradeOrder(tradeId)
 	if !ok {
 		ctx.String(200, "订单不存在")
 
@@ -137,20 +167,22 @@ func checkoutCounter(ctx *gin.Context) {
 		return
 	}
 
-	ctx.HTML(200, order.TradeType+".html", gin.H{
-		"http_host":  uri.Host,
-		"trade_id":   tradeId,
-		"amount":     order.Amount,
-		"address":    order.Address,
-		"expire":     int64(order.ExpiredAt.Sub(time.Now()).Seconds()),
-		"return_url": order.ReturnUrl,
-		"usdt_rate":  order.TradeRate,
-	})
+	ctx.HTML(
+		200, order.TradeType+".html", gin.H{
+			"http_host":  uri.Host,
+			"trade_id":   tradeId,
+			"amount":     order.Amount,
+			"address":    order.Address,
+			"expire":     int64(order.ExpiredAt.Sub(time.Now()).Seconds()),
+			"return_url": order.ReturnUrl,
+			"usdt_rate":  order.TradeRate,
+		},
+	)
 }
 
 func checkStatus(ctx *gin.Context) {
-	var tradeId = ctx.Param("trade_id")
-	var order, ok = model.GetTradeOrder(tradeId)
+	tradeId := ctx.Param("trade_id")
+	order, ok := model.GetTradeOrder(tradeId)
 	if !ok {
 		ctx.JSON(200, respFailJson(fmt.Errorf("订单不存在")))
 

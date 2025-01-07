@@ -2,31 +2,34 @@ package telegram
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/tidwall/gjson"
 	"github.com/v03413/bepusdt/app/config"
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/log"
 	"github.com/v03413/bepusdt/app/model"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
-const cbWallet = "wallet"
-const cbAddress = "address"
-const cbAddressAdd = "address_add"
-const cbAddressEnable = "address_enable"
-const cbAddressDisable = "address_disable"
-const cbAddressDelete = "address_del"
-const cbAddressOtherNotify = "address_other_notify"
-const cbOrderDetail = "order_detail"
+const (
+	cbWallet             = "wallet"
+	cbAddress            = "address"
+	cbAddressAdd         = "address_add"
+	cbAddressEnable      = "address_enable"
+	cbAddressDisable     = "address_disable"
+	cbAddressDelete      = "address_del"
+	cbAddressOtherNotify = "address_other_notify"
+	cbOrderDetail        = "order_detail"
+)
 
 func cbWalletAction(query *tgbotapi.CallbackQuery, address string) {
-	var info = getWalletInfoByAddress(address)
-	var msg = tgbotapi.NewMessage(query.Message.Chat.ID, "❌查询失败")
+	info := getWalletInfoByAddress(address)
+	msg := tgbotapi.NewMessage(query.Message.Chat.ID, "❌查询失败")
 	if info != "" {
 		msg.Text = info
 		msg.ReplyMarkup = tgbotapi.InlineKeyboardMarkup{
@@ -43,7 +46,7 @@ func cbWalletAction(query *tgbotapi.CallbackQuery, address string) {
 }
 
 func cbAddressAddHandle(query *tgbotapi.CallbackQuery) {
-	var msg = tgbotapi.NewMessage(query.Message.Chat.ID, replayAddressText)
+	msg := tgbotapi.NewMessage(query.Message.Chat.ID, replayAddressText)
 	msg.ReplyMarkup = tgbotapi.ForceReply{ForceReply: true, Selective: true, InputFieldPlaceholder: "输入钱包地址"}
 
 	_, _ = botApi.Send(msg)
@@ -52,7 +55,7 @@ func cbAddressAddHandle(query *tgbotapi.CallbackQuery) {
 func cbAddressAction(query *tgbotapi.CallbackQuery, id string) {
 	var wa model.WalletAddress
 	if model.DB.Where("id = ?", id).First(&wa).Error == nil {
-		var otherTextLabel = "✅已启用 非订单交易监控通知"
+		otherTextLabel := "✅已启用 非订单交易监控通知"
 		if wa.OtherNotify != 1 {
 			otherTextLabel = "❌已禁用 非订单交易监控通知"
 		}
@@ -133,14 +136,14 @@ func cbOrderDetailAction(tradeId string) {
 	var o model.TradeOrders
 
 	if model.DB.Where("trade_id = ?", tradeId).First(&o).Error == nil {
-		var urlInfo, er2 = url.Parse(o.NotifyUrl)
+		urlInfo, er2 := url.Parse(o.NotifyUrl)
 		if er2 != nil {
 			log.Error("商户网站地址解析错误：" + er2.Error())
 
 			return
 		}
 
-		var _notifyStateLabel = "✅ 回调成功"
+		_notifyStateLabel := "✅ 回调成功"
 		if o.NotifyState != model.OrderNotifyStateSucc {
 			_notifyStateLabel = "❌ 回调失败"
 		}
@@ -151,13 +154,13 @@ func cbOrderDetailAction(tradeId string) {
 			_notifyStateLabel = "🈚️ 没有回调"
 		}
 
-		var tradeUnit = "USDT.TRC20"
+		tradeUnit := "USDT.TRC20"
 		if o.TradeType == model.OrderTradeTypeTronTrx {
 			tradeUnit = "TRX"
 		}
 
-		var _site = &url.URL{Scheme: urlInfo.Scheme, Host: urlInfo.Host}
-		var _msg = tgbotapi.NewMessage(0, "```"+`
+		_site := &url.URL{Scheme: urlInfo.Scheme, Host: urlInfo.Host}
+		_msg := tgbotapi.NewMessage(0, "```"+`
 📌 订单ID：`+o.OrderId+`
 📊 交易汇率：`+o.TradeRate+`(`+config.GetUsdtRate()+`)
 💰 交易金额：`+fmt.Sprintf("%.2f", o.Money)+` CNY
@@ -185,8 +188,8 @@ func cbOrderDetailAction(tradeId string) {
 }
 
 func getWalletInfoByAddress(address string) string {
-	var url = "https://apilist.tronscanapi.com/api/accountv2?address=" + address
-	var client = http.Client{Timeout: time.Second * 5}
+	url := "https://apilist.tronscanapi.com/api/accountv2?address=" + address
+	client := http.Client{Timeout: time.Second * 5}
 	resp, err := client.Get(url)
 	if err != nil {
 		log.Error("GetWalletInfoByAddress client.Get(url)", err)
@@ -209,11 +212,11 @@ func getWalletInfoByAddress(address string) string {
 	}
 	result := gjson.ParseBytes(all)
 
-	var dateCreated = time.UnixMilli(result.Get("date_created").Int())
-	var latestOperationTime = time.UnixMilli(result.Get("latest_operation_time").Int())
-	var netRemaining = result.Get("bandwidth.netRemaining").Int() + result.Get("bandwidth.freeNetRemaining").Int()
-	var netLimit = result.Get("bandwidth.netLimit").Int() + result.Get("bandwidth.freeNetLimit").Int()
-	var text = `
+	dateCreated := time.UnixMilli(result.Get("date_created").Int())
+	latestOperationTime := time.UnixMilli(result.Get("latest_operation_time").Int())
+	netRemaining := result.Get("bandwidth.netRemaining").Int() + result.Get("bandwidth.freeNetRemaining").Int()
+	netLimit := result.Get("bandwidth.netLimit").Int() + result.Get("bandwidth.freeNetLimit").Int()
+	text := `
 ☘️ 查询地址：` + address + `
 💰 TRX余额：0.00 TRX
 💲 USDT余额：0.00 USDT
@@ -230,7 +233,6 @@ func getWalletInfoByAddress(address string) string {
 			text = strings.Replace(text, "0.00 TRX", fmt.Sprintf("%.2f TRX", v.Get("balance").Float()/1000000), 1)
 		}
 		if v.Get("tokenName").String() == "Tether USD" {
-
 			text = strings.Replace(text, "0.00 USDT", fmt.Sprintf("%.2f USDT", v.Get("balance").Float()/1000000), 1)
 		}
 	}

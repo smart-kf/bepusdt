@@ -3,15 +3,16 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/v03413/bepusdt/app/config"
 	e "github.com/v03413/bepusdt/app/epay"
 	"github.com/v03413/bepusdt/app/help"
 	"github.com/v03413/bepusdt/app/log"
 	"github.com/v03413/bepusdt/app/model"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 )
 
 func Handle(order model.TradeOrders) {
@@ -25,8 +26,8 @@ func Handle(order model.TradeOrders) {
 }
 
 func epay(order model.TradeOrders) {
-	var client = http.Client{Timeout: time.Second * 5}
-	var notifyUrl = fmt.Sprintf("%s?%s", order.NotifyUrl, e.BuildNotifyParams(order))
+	client := http.Client{Timeout: time.Second * 5}
+	notifyUrl := fmt.Sprintf("%s?%s", order.NotifyUrl, e.BuildNotifyParams(order))
 
 	postReq, err2 := http.NewRequest("GET", notifyUrl, nil)
 	if err2 != nil {
@@ -34,8 +35,6 @@ func epay(order model.TradeOrders) {
 
 		return
 	}
-
-	postReq.Header.Set("Powered-By", "https://github.com/v03413/bepusdt")
 	resp, err := client.Do(postReq)
 	if err != nil {
 		log.Error("Notify Handle Error：", err)
@@ -45,21 +44,32 @@ func epay(order model.TradeOrders) {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Warn(fmt.Sprintf("订单回调失败(%v)：resp.StatusCode != 200", order.OrderId), order.OrderSetNotifyState(model.OrderNotifyStateFail))
+		log.Warn(
+			fmt.Sprintf("订单回调失败(%v)：resp.StatusCode != 200", order.OrderId),
+			order.OrderSetNotifyState(model.OrderNotifyStateFail),
+		)
 
 		return
 	}
 
 	all, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Warn(fmt.Sprintf("订单回调失败(%v)：io.ReadAll(resp.Body) Error:", order.OrderId), err, order.OrderSetNotifyState(model.OrderNotifyStateFail))
+		log.Warn(
+			fmt.Sprintf("订单回调失败(%v)：io.ReadAll(resp.Body) Error:", order.OrderId),
+			err,
+			order.OrderSetNotifyState(model.OrderNotifyStateFail),
+		)
 
 		return
 	}
 
 	// 判断是否包含 success
 	if !strings.Contains(strings.ToLower(string(all)), "success") {
-		log.Warn(fmt.Sprintf("订单回调失败(%v)：body not contains success (%s)", order.OrderId, string(all)), err, order.OrderSetNotifyState(model.OrderNotifyStateFail))
+		log.Warn(
+			fmt.Sprintf("订单回调失败(%v)：body not contains success (%s)", order.OrderId, string(all)),
+			err,
+			order.OrderSetNotifyState(model.OrderNotifyStateFail),
+		)
 
 		return
 	}
@@ -73,8 +83,8 @@ func epay(order model.TradeOrders) {
 }
 
 func epusdt(order model.TradeOrders) {
-	var data = make(map[string]interface{})
-	var body = struct {
+	data := make(map[string]interface{})
+	body := struct {
 		TradeId            string  `json:"trade_id"`             //  本地订单号
 		OrderId            string  `json:"order_id"`             //  客户交易id
 		Amount             float64 `json:"amount"`               //  订单金额 CNY
@@ -92,7 +102,7 @@ func epusdt(order model.TradeOrders) {
 		BlockTransactionId: order.TradeHash,
 		Status:             order.Status,
 	}
-	var jsonBody, err = json.Marshal(body)
+	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		log.Error("Notify Json Marshal Error：", err)
 
@@ -110,8 +120,8 @@ func epusdt(order model.TradeOrders) {
 
 	// 再次序列化
 	jsonBody, err = json.Marshal(body)
-	var client = http.Client{Timeout: time.Second * 5}
-	var postReq, err2 = http.NewRequest("POST", order.NotifyUrl, strings.NewReader(string(jsonBody)))
+	client := http.Client{Timeout: time.Second * 5}
+	postReq, err2 := http.NewRequest("POST", order.NotifyUrl, strings.NewReader(string(jsonBody)))
 	if err2 != nil {
 		log.Error("Notify NewRequest Error：", err)
 
@@ -129,20 +139,31 @@ func epusdt(order model.TradeOrders) {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Warn(fmt.Sprintf("订单回调失败(%v)：resp.StatusCode != 200", order.OrderId), order.OrderSetNotifyState(model.OrderNotifyStateFail))
+		log.Warn(
+			fmt.Sprintf("订单回调失败(%v)：resp.StatusCode != 200", order.OrderId),
+			order.OrderSetNotifyState(model.OrderNotifyStateFail),
+		)
 
 		return
 	}
 
 	all, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Warn(fmt.Sprintf("订单回调失败(%v)：io.ReadAll(resp.Body) Error:", order.OrderId), err, order.OrderSetNotifyState(model.OrderNotifyStateFail))
+		log.Warn(
+			fmt.Sprintf("订单回调失败(%v)：io.ReadAll(resp.Body) Error:", order.OrderId),
+			err,
+			order.OrderSetNotifyState(model.OrderNotifyStateFail),
+		)
 
 		return
 	}
 
 	if string(all) != "ok" {
-		log.Warn(fmt.Sprintf("订单回调失败(%v)：body != ok (%s)", order.OrderId, string(all)), err, order.OrderSetNotifyState(model.OrderNotifyStateFail))
+		log.Warn(
+			fmt.Sprintf("订单回调失败(%v)：body != ok (%s)", order.OrderId, string(all)),
+			err,
+			order.OrderSetNotifyState(model.OrderNotifyStateFail),
+		)
 
 		return
 	}

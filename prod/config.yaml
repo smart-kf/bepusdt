@@ -10,7 +10,7 @@ web:
   addr: 0.0.0.0
   port: 8084
   staticDir: ./static
-  appHost: https://payment.smart-kf.top
+  appHost: https://payment.smartkf.top
 
 nsq:
   addrs:

@@ -6,7 +6,7 @@ build:
 	@$(env) go build -o bin/app cmd/server/main.go
 
 build-image:
-	@docker build -t kf-usdtpay .
+	@docker build -t kf-payment .
 
 reload:
 	@docker compose stop && docker compose rm -f && docker compose up -d

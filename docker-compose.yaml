@@ -1,6 +1,6 @@
 services:
   kf-payment:
-    image: kf-usdtpay:latest
+    image: kf-payment:latest
     volumes:
       - ./prod/config.yaml:/app/config.yaml
     command:

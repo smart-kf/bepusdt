@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "transaction_id": "638bd9e49d6f0ce898ec6d77d57a64115576666915602c47432e50df27f560ee",
+      "token_info": {
+        "symbol": "USDT",
+        "address": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
+        "decimals": 6,
+        "name": "Tether Token"
+      },
+      "block_timestamp": 1739195574000,
+      "from": "TTbGTMwUwA3mncLP7xqCZei1ekaNSgeAJe",
+      "to": "TLHDnwut4P7JtAFFWUEd9dr7XkvFTrBt2q",
+      "type": "Transfer",
+      "value": "58948736"
+    }
+  ],
+  "success": true,
+  "meta": {
+    "at": 1739195635631,
+    "fingerprint": "Cndjyb3uzni9co82S7Z4iwW2u9CmP8VaJCdmQNeit88X5n3QBX8f54N47z1AsC7j58LVheSqhEmzV4cMs12yU6zEixBGXgAeMGrVcr1qLtFyyuYukWNiUk1NHRNa65yxuj1nbFD2JbM4urrZNp1upX3jgWWAxjv1rCvKZ8zKchLghP9iJ3X3r61UQFZPU9GHDHp68gYTkg4q8ckAiwHxp8KHUXkRNnGfC2RzJ3iF1GSKyiEY3JfTDsp5QQbsswDTgKc5HwwubfSCa",
+    "links": {
+      "next": "https://api.shasta.trongrid.io/v1/accounts/TTbGTMwUwA3mncLP7xqCZei1ekaNSgeAJe/transactions/trc20?contract_address=TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs&limit=1&fingerprint=Cndjyb3uzni9co82S7Z4iwW2u9CmP8VaJCdmQNeit88X5n3QBX8f54N47z1AsC7j58LVheSqhEmzV4cMs12yU6zEixBGXgAeMGrVcr1qLtFyyuYukWNiUk1NHRNa65yxuj1nbFD2JbM4urrZNp1upX3jgWWAxjv1rCvKZ8zKchLghP9iJ3X3r61UQFZPU9GHDHp68gYTkg4q8ckAiwHxp8KHUXkRNnGfC2RzJ3iF1GSKyiEY3JfTDsp5QQbsswDTgKc5HwwubfSCa"
+    },
+    "page_size": 1
+  }
+}

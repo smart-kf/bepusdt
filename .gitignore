@@ -1,0 +1,9 @@
+bin/
+logtest
+.idea/
+cache/*
+.idea/*
+*.xml
+node_modules
+data/test/
+.DS_Store

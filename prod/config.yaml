@@ -1,0 +1,48 @@
+debug: true
+token: example-token
+
+# CREATE DATABASE kf CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+db:
+  driver: mysql  # mysql / postgres / sqlite ...
+  dsn: "root:124x8Xawdasdx1r140xs$@tcp(localhost:3306)/kf?charset=utf8mb4&parseTime=True&loc=PRC"
+
+web:
+  addr: 0.0.0.0
+  port: 8084
+  staticDir: ./static
+
+nsq:
+  addrs:
+    - 127.0.0.1:4150
+  messageTopic: im_message
+  messageTopicGroup: im_message_group
+  orderExpireTopic: order_expire_notify
+
+httpClient:
+  socketServerAddress: http://127.0.0.1:9000
+  timeout: 60
+  proxy:
+
+address_list:
+  - app_id: kf
+    address: TWjUCTN2UuqVDUmN4FbdSkmszv5TwpzY7T
+    enable: true
+  - app_id: kf2
+    address: TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG
+    enable: true
+
+apps:
+  - app_id: app1
+    token: token
+    return_url: http://localhost:9092/return
+    notify_url: http://localhost:9092/api/notify
+    notify_number: 10
+
+# https://developers.tron.network/reference/background
+# nile 网络:
+tron:
+  proxy: http://localhost:10081
+  apiKey: "b5ac2d1c-ba6c-482d-899f-7bf6e9165e19"
+  timeout: 3
+  apiHost: https://nile.trongrid.io
+  usdtContractAddress: TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf

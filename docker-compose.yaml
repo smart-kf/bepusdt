@@ -1,0 +1,16 @@
+services:
+  kf-api:
+    image: kf-usdtpay:latest
+    volumes:
+      - ./prod/config.yaml:/app/config.yaml
+    command:
+      - /app/app
+    ports:
+      - "8084:808"
+    restart: always
+    networks:
+      - kf_network
+
+networks:
+  kf_network:
+    external: true

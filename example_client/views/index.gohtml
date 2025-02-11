@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>选择商品下单</title>
+</head>
+<body>
+<table border="1">
+    <thead>
+    <tr>
+        <td>
+            商品名称
+        </td>
+        <td>
+            价格
+        </td>
+        <td>
+            操作
+        </td>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        {{ range .goods }}
+            <td>
+                {{ .Name }}
+            </td>
+            <td>
+                {{ .Price }}
+            </td>
+            <td>
+                <a href="javascript:;" onclick="gotoPay({{ .Price }})">购买</a>
+            </td>
+        {{ end }}
+    </tr>
+    </tbody>
+</table>
+
+<h3>
+    *请输入付款地址* 必选
+</h3>
+<input type="text" value="" id="fromAddress">
+
+<script>
+    function gotoPay(price){
+        let val = document.getElementById("fromAddress").value
+        if(val == "" ) {
+            alert("请输入付款地址")
+            return false;
+        }
+        window.location.href = '/pay?price=' + price + '&fromAddress=' + val
+    }
+</script>
+
+</body>
+</html>

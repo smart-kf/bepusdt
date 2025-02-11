@@ -8,6 +8,8 @@ services:
     ports:
       - "8084:808"
     restart: always
+    environment:
+      CONFIG_FILE: '/app/config.yaml'
     networks:
       - kf_network
 

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,37 @@ func Pay(ctx *gin.Context) {
 			"order":  order,
 			"money":  money,
 			"expire": expire,
+		},
+	)
+}
+
+func CheckStatus(ctx *gin.Context) {
+	id := ctx.Param("tradeId")
+	appId := ctx.Query("appid")
+	app := config.Setting.FindApp(appId)
+	if app.AppId == "" {
+		sendError(
+			ctx, errors.New("500 internal server error"),
+		)
+		return
+	}
+	order, ok, err := orders.OrderByTradeId(config.Setting.MysqlClient, appId, id)
+	if !ok {
+		sendError(
+			ctx, errors.New("500 internal server error"),
+		)
+		return
+	}
+	if err != nil {
+		sendError(
+			ctx, errors.New("500 internal server error"),
+		)
+		return
+	}
+	sendSuccess(
+		ctx, gin.H{
+			"status":     order.Status,
+			"return_url": app.ReturnUrl,
 		},
 	)
 }

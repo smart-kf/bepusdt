@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"usdtpay/config"
 	"usdtpay/domain/dto"
 	"usdtpay/domain/service"
 )
@@ -19,7 +20,38 @@ type CreateOrderRequest struct {
 	Expire      int     `json:"expire" binding:"required"` // 过期秒数
 }
 
+type Error struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (e Error) Error() string {
+	return e.Message
+}
+
+func NewParamsError(msg string) error {
+	return &Error{
+		Code:    400,
+		Message: msg,
+	}
+}
+
 func (r *CreateOrderRequest) Validate() error {
+	if r.AppId == "" {
+		return NewParamsError("appid 不能为空")
+	}
+	if r.OrderId == "" {
+		return NewParamsError("orderid 不能为空")
+	}
+	if r.Name == "" {
+		return NewParamsError("name 不能为空")
+	}
+	if r.FromAddress == "" {
+		return NewParamsError("fromAddress不能为空")
+	}
+	if r.Expire == 0 {
+		return NewParamsError("过期时间不能为空")
+	}
 	return nil
 }
 
@@ -57,6 +89,12 @@ func CreateOrder(ctx *gin.Context) {
 	sendSuccess(
 		ctx, gin.H{
 			"trade_id": order.TradeId,
+			"pay_url": fmt.Sprintf(
+				"%s/pay?trade_id=%s&app_id=%s",
+				config.Setting.Web.AppHost,
+				order.TradeId,
+				order.AppId,
+			),
 		},
 	)
 }

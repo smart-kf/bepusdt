@@ -36,8 +36,8 @@
                     {{.money}} <span>USDT.TRC20</span>
                 </h1>
             </div>
-            <div class="address parse-action" data-clipboard-text="{{.ordder.Address}}" id="address">
-                {{.ordder.Address}}
+            <div class="address parse-action" data-clipboard-text="{{.order.Address}}" id="address">
+                {{.order.Address}}
             </div>
             <div class="main">
                 <div class="qr-image" id="qrcode"></div>
@@ -68,6 +68,7 @@
 </div>
 <script>
     let expire = {{.expire}};
+    let appId = '{{ .order.AppId}}';
 
     // 支付时间倒计时
     function clock() {
@@ -75,7 +76,6 @@
         let minute = Math.floor(seconds / 60);
         let hour = Math.floor(minute / 60);
         if (seconds <= 0) {
-
             return layer.alert("支付超时，请重新发起支付！", {icon: 5});
         }
 
@@ -90,19 +90,18 @@
         $.ajax({
             type: "GET",
             dataType: "json",
-            url: "/pay/check-status/{{.trade_id}}",
+            url: "/pay/check-status/{{.order.TradeId}}?appid=" + appId,
             success: function (data) {
-                if (data.status === 1) {
+                if (data.data.status === 1) {
                     // 等待支付
                     return setTimeout(checkStatus, 5000);
                 }
-                if (data.status === 2) {  // 支付成功
-                    layer.msg('支付成功，正在跳转中...', {icon: 16, shade: 0.01, time: 20000});
-
-                    return window.location.href = data.return_url;
+                if (data.data.status === 2) {  // 支付成功
+                    layer.confirm("支付成功,点击确定跳转...", function(params){
+                        return window.location.href = data.data.return_url;
+                    });
                 }
-                if (data.status === 3) {
-
+                if (data.data.status === 3) {
                     return layer.alert("支付超时，请重新发起支付！", {icon: 5, title: "❌ 支付超时"});
                 }
             }
@@ -111,7 +110,7 @@
 
     $(function () {
         $('#qrcode').qrcode({
-            text: "{{.address}}",
+            text: "{{.order.Address}}",
             width: 230,
             height: 230,
             foreground: "#000000",

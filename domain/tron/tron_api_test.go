@@ -29,8 +29,8 @@ func TestTron(t *testing.T) {
 		},
 	)
 
-	c.GetTransactions("TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG", "")
-
+	tx, fing, err := c.GetTransactions("TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG", "", 1)
+	t.Logf("%+v,%s,%s", tx, fing, err)
 }
 
 // https://api.trongrid.io/v1/accounts/TQfeVbRzf7tUZkaeYdZrpKefFumVPbc3RM/transactions/trc20?limit=1&contract_address=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t

@@ -52,7 +52,7 @@ func (s *TransactionService) RunOnce() {
 		if lastTx != nil {
 			fingerPrint = lastTx.FingerPrint
 		}
-		txs, fingerPrint, err := s.tronApiClient.GetTransactions(address.Address, fingerPrint)
+		txs, fingerPrint, err := s.tronApiClient.GetTransactions(address.Address, fingerPrint, 100)
 		if err != nil {
 			xlogger.Error(ctx, "RunOnce-GetTransactions failed", xlogger.Err(err))
 			continue

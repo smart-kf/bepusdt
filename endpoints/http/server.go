@@ -67,6 +67,7 @@ func StartHttpServer(stopChan chan struct{}) {
 	}
 
 	g.GET("/pay", controller.Pay)
+	g.GET("/pay/check-status/:tradeId", controller.CheckStatus)
 	server := &http.Server{Addr: config.Setting.Web.String(), Handler: g}
 
 	go func() {

@@ -36,6 +36,10 @@ func (s *CreateOrderService) init() error {
 	// 1. 初始化事务.
 	s.tx = config.Setting.MysqlClient.Begin()
 
+	// 校验订单
+	if err := s.checkOrder(); err != nil {
+		return err
+	}
 	// 2. 查找一个可用的地址.
 	if err := s.initAvailableAddress(); err != nil {
 		return err
@@ -46,6 +50,23 @@ func (s *CreateOrderService) init() error {
 		return err
 	}
 
+	return nil
+}
+
+func (s *CreateOrderService) checkOrder() error {
+	var cnt int64
+	s.tx.Model(&dao.TradeOrders{}).Where("app_id = ? and order_id = ?", s.data.AppId, s.data.OrderId).Count(&cnt)
+	if cnt > 0 {
+		return errors.New("订单号已存在")
+	}
+	// 校验地址是否ok
+	s.tx.Model(&dao.TradeOrders{}).Where(
+		"app_id = ? and from_address = ? and status = ? and amount = ?",
+		s.data.AppId, s.data.FromAddress, s.data.OrderId, s.data.Amount,
+	).Count(&cnt)
+	if cnt > 0 {
+		return errors.New("该地址有重复订单，请取消再试")
+	}
 	return nil
 }
 

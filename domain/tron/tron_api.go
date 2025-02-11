@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	xlogger "github.com/clearcodecn/log"
@@ -44,14 +45,14 @@ func NewTronApiClient(
 	}
 }
 
-func (c *TronApiClient) GetTransactions(address string, fingerPrint string) ([]Transaction, string, error) {
+func (c *TronApiClient) GetTransactions(address string, fingerPrint string, limit int) ([]Transaction, string, error) {
 	uri := fmt.Sprintf("%s/v1/accounts/%s/transactions/trc20", c.tronConfig.ApiHost, address)
 	query := make(url.Values)
-	query.Add("only_confirmed", "1")
+	// query.Add("only_confirmed", "1")
 	if fingerPrint != "" {
 		query.Add("fingerprint", fingerPrint)
 	}
-	query.Add("limit", "100")
+	query.Add("limit", strconv.Itoa(limit))
 	query.Add("contract_address", c.tronConfig.ContractAddress)
 	uri = uri + "?" + query.Encode()
 	req, err := http.NewRequest(http.MethodGet, uri, nil)
@@ -77,6 +78,7 @@ func (c *TronApiClient) GetTransactions(address string, fingerPrint string) ([]T
 	if !res.Success {
 		return nil, "", errors.New("server response:" + res.Error)
 	}
+	xlogger.Info(context.Background(), "tron-response", xlogger.Any("url", res.Meta))
 
 	return res.Transactions, res.Meta.FingerPrint, nil
 }

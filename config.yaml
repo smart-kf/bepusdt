@@ -11,6 +11,7 @@ web:
   addr: 0.0.0.0
   port: 8082
   staticDir: ./static
+  appHost: http://localhost:8082
 
 nsq:
   addrs:
@@ -28,7 +29,7 @@ address_list:
   - app_id: kf
     address: TWjUCTN2UuqVDUmN4FbdSkmszv5TwpzY7T
     enable: true
-  - app_id: kf2
+  - app_id: app1
     address: TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG
     enable: true
 

@@ -60,6 +60,7 @@ type Web struct {
 	Addr      string `json:"addr" default:"127.0.0.1"`
 	Port      int    `json:"port" default:"8081"`
 	StaticDir string `json:"staticDir" default:"static"`
+	AppHost   string `json:"app_host" default:"http://localhost:8082"` // 访问域名
 }
 
 func (w Web) String() string {

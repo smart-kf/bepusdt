@@ -3,7 +3,7 @@ module usdtpay
 go 1.23.2
 
 require (
-	github.com/clearcodecn/log v1.1.2
+	github.com/clearcodecn/log v1.1.3
 	github.com/gin-contrib/cors v1.7.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-resty/resty/v2 v2.16.5

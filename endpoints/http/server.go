@@ -64,6 +64,7 @@ func StartHttpServer(stopChan chan struct{}) {
 	)
 	{
 		orderRoute.POST("/create", controller.CreateOrder)
+		orderRoute.POST("/query", controller.Query)
 	}
 
 	g.GET("/pay", controller.Pay)

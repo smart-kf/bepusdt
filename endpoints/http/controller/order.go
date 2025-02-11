@@ -12,12 +12,12 @@ import (
 )
 
 type CreateOrderRequest struct {
-	AppId       string  `json:"app_id" binding:"required"`
-	OrderId     string  `json:"order_id" binding:"required"`
-	Name        string  `json:"name" binding:"required"`
-	Amount      float64 `json:"amount" binding:"required"`
-	FromAddress string  `json:"from_address" binding:"required"`
-	Expire      int     `json:"expire" binding:"required"` // 过期秒数
+	AppId       string `json:"app_id" binding:"required"`
+	OrderId     string `json:"order_id" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Amount      int64  `json:"amount" binding:"required"` // 1e6
+	FromAddress string `json:"from_address" binding:"required"`
+	Expire      int    `json:"expire" binding:"required"` // 过期秒数
 }
 
 type Error struct {

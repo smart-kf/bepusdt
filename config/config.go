@@ -99,4 +99,5 @@ type Tron struct {
 	UsdtContractAddress string `json:"usdtContractAddress"`
 	Proxy               string `json:"proxy"`
 	Timeout             int    `json:"timeout"`
+	CronSecond          int    `json:"cron_second"` // 定时任务执行秒数间隔
 }

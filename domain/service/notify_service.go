@@ -101,10 +101,12 @@ func (s *NotifyService) Notify() error {
 	xlogger.Info(
 		context.Background(), "异步通知成功", xlogger.Any(
 			"data", map[string]interface{}{
-				"app_id":   s.app.AppId,
-				"order_id": s.order.OrderId,
-				"trade_id": s.order.TradeId,
-				"hash":     s.order.TradeHash,
+				"app_id":       s.app.AppId,
+				"order_id":     s.order.OrderId,
+				"trade_id":     s.order.TradeId,
+				"hash":         s.order.TradeHash,
+				"address":      s.order.Address,
+				"from_address": s.order.FromAddress,
 			},
 		),
 	)

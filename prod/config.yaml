@@ -1,22 +1,24 @@
 debug: true
-token: example-token
+token: dj2D9XRtbG4
 
 # CREATE DATABASE kf CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 db:
   driver: mysql  # mysql / postgres / sqlite ...
-  dsn: "root:124x8Xawdasdx1r140xs$@tcp(localhost:3306)/kf?charset=utf8mb4&parseTime=True&loc=PRC"
+  dsn: "root:124x8Xawdasdx1r140xs$@tcp(mysql:3306)/usdtpayment?charset=utf8mb4&parseTime=True&loc=PRC"
 
 web:
   addr: 0.0.0.0
   port: 8084
   staticDir: ./static
+  appHost: https://payment.smart-kf.top
 
 nsq:
   addrs:
-    - 127.0.0.1:4150
-  messageTopic: im_message
-  messageTopicGroup: im_message_group
-  orderExpireTopic: order_expire_notify
+    - nsq:4150
+  block_chain_topic: block-chain
+  block_chain_group: block-chain-group
+  notify_topic: notify-topic
+  notify_group: notify-group
 
 httpClient:
   socketServerAddress: http://127.0.0.1:9000
@@ -25,24 +27,25 @@ httpClient:
 
 address_list:
   - app_id: kf
-    address: TWjUCTN2UuqVDUmN4FbdSkmszv5TwpzY7T
-    enable: true
-  - app_id: kf2
     address: TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG
+    enable: true
+  - app_id: kf
+    address: TQfeVbRzf7tUZkaeYdZrpKefFumVPbc3RM
     enable: true
 
 apps:
-  - app_id: app1
-    token: token
-    return_url: http://localhost:9092/return
-    notify_url: http://localhost:9092/api/notify
+  - app_id: kf
+    token: dj2D9XRtbG4
+    return_url: https://bill.smartkf.top/bill-fe/order/pay-success
+    notify_url: https://bill.smartkf.top/bill-fe/order/notify
     notify_number: 10
 
 # https://developers.tron.network/reference/background
 # nile 网络:
 tron:
-  proxy: http://localhost:10081
+  #proxy: http://localhost:10081
   apiKey: "b5ac2d1c-ba6c-482d-899f-7bf6e9165e19"
   timeout: 3
   apiHost: https://nile.trongrid.io
   usdtContractAddress: TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf
+  cron_second: 15  # 每15s查询一次接口

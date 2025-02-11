@@ -19,7 +19,7 @@ type TradeOrders struct {
 	AppId       string     `gorm:"column:app_id;type:varchar(255)"`
 	TradeId     string     `gorm:"type:varchar(255);not null;unique;color:blue;comment:本地订单ID"`
 	TradeHash   string     `gorm:"type:varchar(64);default:'';unique;comment:交易哈希"`
-	Amount      float64    `gorm:"default:0;comment:USDT交易数额,实际金额"`
+	Amount      int64      `gorm:"default:0;comment:USDT交易数额,实际金额"`
 	Money       int64      `gorm:"default:0;comment:订单交易金额,乘以1e6"`
 	Address     string     `gorm:"type:varchar(34);not null;comment:收款地址"`
 	FromAddress string     `gorm:"type:varchar(34);not null;default:'';comment:支付地址"`

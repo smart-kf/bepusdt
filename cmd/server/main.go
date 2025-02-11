@@ -8,10 +8,10 @@ import (
 	xlogger "github.com/clearcodecn/log"
 
 	"usdtpay/config"
+	"usdtpay/endpoints/cron"
 	"usdtpay/endpoints/http"
 	"usdtpay/endpoints/nsq/consumer/blockchain"
 	"usdtpay/endpoints/nsq/consumer/notify"
-	"usdtpay/infr/cron"
 )
 
 var (

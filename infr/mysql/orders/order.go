@@ -6,7 +6,7 @@ import (
 	"usdtpay/infr/mysql/dao"
 )
 
-func GetOrdersByAmount(tx *gorm.DB, appId string, address string, amount float64) ([]*dao.TradeOrders, error) {
+func GetOrdersByAmount(tx *gorm.DB, appId string, address string, amount int64) ([]*dao.TradeOrders, error) {
 	var res []*dao.TradeOrders
 	err := tx.Where(
 		"address = ? and app_id = ? and amount = ? and status = ?",
@@ -24,6 +24,18 @@ func GetOrdersByAmount(tx *gorm.DB, appId string, address string, amount float64
 func OrderByTradeId(tx *gorm.DB, appid string, tradeId string) (*dao.TradeOrders, bool, error) {
 	var order dao.TradeOrders
 	err := tx.Where("app_id = ? and trade_id = ?", appid, tradeId).First(&order).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	return &order, true, nil
+}
+
+func OrderByOrderId(tx *gorm.DB, appid string, orderId string) (*dao.TradeOrders, bool, error) {
+	var order dao.TradeOrders
+	err := tx.Where("app_id = ? and order_id = ?", appid, orderId).First(&order).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, false, nil

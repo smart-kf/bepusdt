@@ -6,7 +6,7 @@ services:
     command:
       - /app/app
     ports:
-      - "8084:808"
+      - "8084:8084"
     restart: always
     environment:
       CONFIG_FILE: '/app/config.yaml'

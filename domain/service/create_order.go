@@ -50,6 +50,11 @@ func (s *CreateOrderService) init() error {
 		return err
 	}
 
+	// 4. 验证金额
+	if err := s.checkMoney(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -59,13 +64,18 @@ func (s *CreateOrderService) checkOrder() error {
 	if cnt > 0 {
 		return errors.New("订单号已存在")
 	}
+	return nil
+}
+
+func (s *CreateOrderService) checkMoney() error {
+	var cnt int64
 	// 校验地址是否ok
 	s.tx.Model(&dao.TradeOrders{}).Where(
-		"app_id = ? and from_address = ? and status = ? and amount = ?",
-		s.data.AppId, s.data.FromAddress, s.data.OrderId, s.data.Amount,
+		"app_id = ? and from_address = ? and status = ? and money = ?",
+		s.data.AppId, s.data.FromAddress, s.data.OrderId, s.money,
 	).Count(&cnt)
 	if cnt > 0 {
-		return errors.New("该地址有重复订单，请取消再试")
+		return errors.New("该地址有重复订单金额，请取消再试")
 	}
 	return nil
 }

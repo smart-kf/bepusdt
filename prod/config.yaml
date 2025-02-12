@@ -36,7 +36,7 @@ address_list:
 apps:
   - app_id: kf
     token: dj2D9XRtbG4
-    return_url: https://bill.smartkf.top/bill-fe/order/pay-success
+    return_url: https://bill.smartkf.top/bill/order/pay-success
     notify_url: https://bill.smartkf.top/bill-fe/order/notify
     notify_number: 10
 

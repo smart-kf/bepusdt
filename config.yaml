@@ -27,7 +27,7 @@ httpClient:
 
 address_list:
   - app_id: kf
-    address: TWjUCTN2UuqVDUmN4FbdSkmszv5TwpzY7T
+    address: TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG
     enable: true
   - app_id: app1
     address: TLT2gJpbRx4e2fWuwzUwhkn7eHXfAfGocG
@@ -39,6 +39,11 @@ apps:
     return_url: http://localhost:9092/return
     notify_url: http://localhost:9092/api/notify
     notify_number: 10
+  - app_id: kf
+    token: 1234
+    return_url: http://localhost:8081/order/pay-success
+    notify_url: http://localhost:8081/bill-fe/order/notify
+    notify_number: 10
 
 # https://developers.tron.network/reference/background
 # nile 网络:
@@ -48,3 +53,4 @@ tron:
   timeout: 3
   apiHost: https://nile.trongrid.io
   usdtContractAddress: TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf
+  cron_second: 10

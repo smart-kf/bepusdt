@@ -14,7 +14,7 @@ func GetOrdersByAmount(tx *gorm.DB, appId string, address string, amount int64) 
 		appId,
 		amount,
 		dao.StatusWait,
-	).Order("money asc").Limit(100).Select("id,amount").Find(&res).Error
+	).Order("money asc").Limit(100).Select("id,amount,money").Find(&res).Error
 	if err != nil {
 		return nil, err
 	}

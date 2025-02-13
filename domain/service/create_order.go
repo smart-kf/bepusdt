@@ -98,19 +98,28 @@ func (s *CreateOrderService) getAmount() error {
 		s.money = s.data.Amount
 		return nil
 	}
-	if len(orders) == 100 {
+	if len(orders) >= 99 {
 		return errors.New("no available address")
 	}
 	money := s.data.Amount
 	floor := int64(0.01 * 1000000)
-	for _, o := range orders {
-		if o.Money != money {
-			s.money = money
+	lastMoney := money
+	for {
+		lastMoney = money
+		for _, o := range orders {
+			if o.Money == money {
+				money += floor
+				break
+			}
+		}
+		if money-s.data.Amount == 1 {
+			return errors.New("创建订单失败,请重试")
+		}
+		if lastMoney == money {
 			break
-		} else {
-			money += floor
 		}
 	}
+	s.money = money
 	return nil
 }
 

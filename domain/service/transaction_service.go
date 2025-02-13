@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -40,6 +41,7 @@ func NewTransactionService() *TransactionService {
 }
 
 func (s *TransactionService) RunOnce() {
+	fmt.Println("service start-------")
 	ctx := context.Background()
 	addressList, err := address2.GetAddressList(config.Setting.MysqlClient)
 	if err != nil {

@@ -1,12 +1,17 @@
 package controller
 
 import (
+	"crypto/md5"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"usdtpay/config"
+	"usdtpay/infr/mysql/dao"
 	"usdtpay/infr/mysql/orders"
 )
 
@@ -64,10 +69,31 @@ func CheckStatus(ctx *gin.Context) {
 		)
 		return
 	}
+	if order.Status == dao.StatusSuccess {
+		app.ReturnUrl = app.ReturnUrl + "?" + buildQuery(order)
+	}
 	sendSuccess(
 		ctx, gin.H{
 			"status":     order.Status,
 			"return_url": app.ReturnUrl,
 		},
 	)
+}
+
+func buildQuery(order *dao.TradeOrders) string {
+	token := config.Setting.Token
+	var keys = []string{
+		"orderId=" + order.OrderId,
+		"tradeId=" + order.TradeId,
+		"status=" + strconv.Itoa(order.Status),
+	}
+	x := md5.New()
+	for _, k := range keys {
+		x.Write([]byte(k))
+	}
+	x.Write([]byte(token))
+	a := x.Sum(nil)
+	sign := fmt.Sprintf("%x", a)
+	keys = append(keys, "sign="+sign)
+	return strings.Join(keys, "&")
 }

@@ -31,7 +31,7 @@ address_list:
     enable: true
   - app_id: kf
     address: TQfeVbRzf7tUZkaeYdZrpKefFumVPbc3RM
-    enable: true
+    enable: false
 
 apps:
   - app_id: kf

@@ -73,6 +73,10 @@ func (c *ConfirmOrderService) Confirm() error {
 		c.tx.Rollback()
 		return err
 	}
+
+	// :: 这里先提交事务，因为先推送队列，会导致队列消费查询订单，事务还没来得及提交的话，
+	// 订单数据还是旧的.
+	c.tx.Commit()
 	// 3. 通知调用方, 推送调用队列里面.
 	e := event.OrderNotify{
 		Id:     c.order.Id,
@@ -80,10 +84,9 @@ func (c *ConfirmOrderService) Confirm() error {
 	}
 	data, _ := json.Marshal(e)
 	if err := config.Setting.NsqProducer.Publish(config.Setting.NSQ.NotifyTopic, data); err != nil {
-		c.tx.Rollback()
+		xlogger.Error(context.Background(), "notifyPublish failed", xlogger.Err(err))
 		return err
 	}
-	c.tx.Commit()
 	return nil
 }
 

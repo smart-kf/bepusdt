@@ -103,7 +103,9 @@ func (s *TransactionService) publish(data []*dao.AddressTransaction) {
 		}
 		eventBytes, _ := json.Marshal(event)
 		topic := config.Setting.NSQ.BlockChainTopic
-		config.Setting.NsqProducer.Publish(topic, eventBytes)
+		if err := config.Setting.NsqProducer.Publish(topic, eventBytes); err != nil {
+			xlogger.Error(context.Background(), "PublishMessage Failed: BlockChainTopic", xlogger.Err(err))
+		}
 	}
 }
 

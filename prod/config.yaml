@@ -37,7 +37,7 @@ apps:
   - app_id: kf
     token: dj2D9XRtbG4
     return_url: https://smartkf.top/order/pay-success
-    notify_url: https://smartkf.top/bill-fe/order/notify
+    notify_url: https://smartkf.top/api/bill-fe/order/notify
     notify_number: 10
 
 # https://developers.tron.network/reference/background

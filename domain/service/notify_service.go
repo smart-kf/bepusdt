@@ -97,6 +97,20 @@ func (s *NotifyService) Notify() error {
 			xlogger.Error(context.Background(), "retry Publish failed", xlogger.Err(err), xlogger.Any("event", s.event))
 			return nil
 		}
+		xlogger.Error(
+			context.Background(), "异步通知失败", xlogger.Any(
+				"data", map[string]interface{}{
+					"app_id":       s.app.AppId,
+					"order_id":     s.order.OrderId,
+					"trade_id":     s.order.TradeId,
+					"hash":         s.order.TradeHash,
+					"address":      s.order.Address,
+					"from_address": s.order.FromAddress,
+				},
+			),
+			xlogger.Err(err),
+		)
+		return nil
 	}
 	xlogger.Info(
 		context.Background(), "异步通知成功", xlogger.Any(
@@ -141,6 +155,7 @@ func (s *NotifyService) notify() error {
 			"order_id":  s.order.OrderId,
 			"status":    s.order.Status,
 			"timestamp": confirmAt,
+			"address":   s.order.Address,
 		},
 	).
 		SetHeader("Authorization", config.Setting.Token).

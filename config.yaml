@@ -42,7 +42,7 @@ apps:
   - app_id: kf
     token: 1234
     return_url: http://localhost:8081/order/pay-success
-    notify_url: http://localhost:8081/bill-fe/order/notify
+    notify_url: http://localhost:8081/api/bill-fe/order/notify
     notify_number: 10
 
 # https://developers.tron.network/reference/background
